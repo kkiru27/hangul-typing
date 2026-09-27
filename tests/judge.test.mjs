@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
-import { gogumaFor, saveStageResult, isUnlocked, totalGoguma } from '../js/records.js';
+import { gogumaFor, gogumaForTest, saveStageResult, isUnlocked, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, buildKeysRound, hasRiskyPair, stageChars, stageTitle, shuffleItems, itemsForRound } from '../js/lessons.js';
+import { STAGES, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, shuffleItems, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, ROWS } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
@@ -159,8 +159,17 @@ test('단계 순서와 제목 (게임은 번호 없이)', () => {
   assert.equal(stageTitle(1), '2단계 · 기본자리 낱말');
   assert.equal(stageTitle(2), '게임 · 고구마 비');
   assert.equal(stageTitle(3), '3단계 · 왼손 윗줄');
-  assert.equal(stageTitle(STAGES.length - 2), '9단계 · 숫자·부호');
-  assert.equal(stageTitle(STAGES.length - 1), '10단계 · 짧은 글');
+  const at = (id) => stageTitle(STAGES.findIndex((s) => s.id === id));
+  assert.equal(at('keys-number'), '9단계 · 숫자·부호');
+  assert.equal(at('sentences-1'), '10단계 · 짧은 글');
+  assert.equal(at('long-1'), '11단계 · 긴 글');
+  assert.equal(at('test-1min'), '검정 · 1분 타자 검정');
+});
+
+test('긴 글은 이야기 순서대로 판마다 이어짐', () => {
+  const stage = STAGES.find((s) => s.type === 'long');
+  const parts = stage.rounds.map((_, i) => itemsForRound(stage.lines, stage, i));
+  assert.deepEqual(parts.flat(), stage.lines);
 });
 
 test('게임은 깨지 않아도 다음 단계가 열림', () => {
@@ -178,14 +187,14 @@ test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () =>
       for (const ch of stageChars(stage)) learned.add(ch);
       continue;
     }
-    if (stage.type === 'sentences') {
-      for (const t of stage.sentences) {
+    if (stage.type === 'sentences' || stage.type === 'long' || stage.type === 'test') {
+      for (const t of stageItems(stage)) {
         const bad = toKeys(t).filter((k) => !learned.has(k));
         assert.deepEqual(bad, [], `${stage.id}: '${t}'에 아직 안 배운 키 ${bad.join(' ')}`);
         assert.match(t, /[.!?]$/, `${stage.id}: '${t}'는 문장부호로 끝나야 함`);
         assert.ok(!/\s\s|^\s|\s$/.test(t), `${stage.id}: '${t}' 띄어쓰기`);
       }
-      assert.ok(stage.sentences.length >= stage.rounds.reduce((n, r) => n + r.count, 0), '문장이 판보다 적음');
+      assert.ok(stageItems(stage).length >= stage.rounds.reduce((n, r) => n + r.count, 0), '문장이 판보다 적음');
       continue;
     }
     if (stage.type !== 'words') continue;
@@ -227,9 +236,9 @@ test('낱말 + 스페이스를 입력기 흉내로 판정 (스페이스가 조�
   assert.equal(judge.missByKey[' '], 1);
 });
 
-test('짧은 글 문장을 입력기 흉내로 판정 (띄어쓰기·겹받침·쌍자음·문장부호)', () => {
-  const stage = STAGES.find((s) => s.type === 'sentences');
-  for (const t of stage.sentences) {
+test('짧은 글·긴 글 문장을 입력기 흉내로 판정 (띄어쓰기·겹받침·쌍자음·문장부호)', () => {
+  const lines = STAGES.filter((s) => s.type === 'sentences' || s.type === 'long').flatMap(stageItems);
+  for (const t of lines) {
     const { judge, log, text } = run(t, toKeys(t));
     assert.equal(text, t);
     assert.ok(log.every((k) => k === 'ok'), `${t}: ${log.join(',')}`);
@@ -276,6 +285,11 @@ test('고구마와 단계 열림', () => {
   assert.equal(rec[STAGES[0].id].goguma, 2);
   assert.equal(rec[STAGES[0].id].plays, 3);
   assert.equal(totalGoguma(STAGES, rec), 2);
+  // 검정: 타수와 정확도 둘 다
+  assert.equal(gogumaForTest(1, 6), 0);      // 정확해도 너무 느리면 0
+  assert.equal(gogumaForTest(1, 65), 2);
+  assert.equal(gogumaForTest(0.8, 150), 1);  // 빨라도 부정확하면 낮은 쪽
+  assert.equal(gogumaForTest(0.96, 120), 3);
   // 타수 최고 기록
   const r2 = {};
   saveStageResult(r2, 'x', 0.9, 80);

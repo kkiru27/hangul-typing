@@ -9,11 +9,13 @@
 //   'words'  낱말 연습: 낱말을 치고 스페이스바로 다음 낱말. 한 판에 count개
 //   'game'   게임(고구마 비). optional: 깨지 않아도 다음 단계가 열린다. 단계 번호 대신 '게임'
 //   'sentences' 짧은 글: 문장을 끝까지 치고 Enter(또는 스페이스바)로 다음 문장. 모든 문장은 문장부호로 끝난다
-//   (다음) 'long' 긴 글
+//   'long'      긴 글: 이야기를 줄마다 차례로 (짧은 글과 같게 Enter로 다음 줄)
+//   'test'      타자 검정: 정해진 시간(duration) 동안 짧은 글을 치고 타수·정확도를 잰다
+// label이 있는 단계(게임, 검정)는 단계 번호 대신 label을 쓰고 번호 셀 때 빠진다.
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js?v=202609270912';
+import { toKeys } from './hangul.js?v=202609270917';
 
 // 낱말 → 그림 (그림이 없으면 빈칸)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말
@@ -52,6 +54,25 @@ const SENTENCES = [
   '누가 제일 빨리 칠까?', '오늘도 잘했어요!',
 ];
 
+// 긴 글: 직접 지은 이야기 "춘식이의 고구마 밭" (한 줄 = 한 문장, 차례대로 친다)
+const STORY = [
+  '춘식이는 고구마를 아주 좋아하는 고양이예요.',
+  '어느 날 아침, 춘식이는 고구마 밭에 가기로 했어요.',
+  '가방에 물병과 모자를 챙겼어요.',
+  '햇살이 따뜻하고 바람이 살랑살랑 불었어요.',
+  '춘식이는 콧노래를 부르며 길을 걸었어요.',
+  '밭에 도착하니 잎사귀가 초록빛으로 반짝였어요.',
+  '춘식이는 작은 삽으로 흙을 살살 팠어요.',
+  '커다란 고구마가 쑥 하고 나왔어요!',
+  '춘식이는 너무 기뻐서 폴짝폴짝 뛰었어요.',
+  '고구마를 바구니에 가득 담았어요.',
+  '집에 돌아와 고구마를 맛있게 구웠어요.',
+  '달콤한 냄새가 온 집 안에 퍼졌어요.',
+  '춘식이는 친구들을 불러 고구마를 나눠 먹었어요.',
+  '모두 함께 먹으니 더 맛있었어요.',
+  '오늘은 정말 행복한 하루였어요!',
+];
+
 export const STAGES = [
   {
     id: 'keys-home',
@@ -85,6 +106,7 @@ export const STAGES = [
     name: '고구마 비',
     type: 'game',
     optional: true,
+    label: '게임',
     preview: '🍠 떨어지는 낱말 잡기',
     tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요.',
     total: 12,
@@ -194,6 +216,33 @@ export const STAGES = [
       { title: '문장 3', hello: '춘춘춘!! (마지막 판이야!)', count: 5 },
     ],
   },
+  {
+    id: 'long-1',
+    group: '긴 글',
+    name: '긴 글',
+    type: 'long',
+    lines: STORY,
+    preview: '춘식이의 고구마 밭',
+    tip: '이야기를 한 줄씩 차례로 쳐요. 줄 끝에서 Enter를 누르면 다음 줄이에요.',
+    rounds: [
+      { title: '이야기 1', hello: '춘! 춘춘! (내 이야기를 쳐 줘!)', count: 5 },
+      { title: '이야기 2', hello: '츈츈~ (고구마를 캐러 가자!)', count: 5 },
+      { title: '이야기 3', hello: '춘춘춘!! (이야기의 끝이야!)', count: 5 },
+    ],
+  },
+  {
+    id: 'test-1min',
+    group: '검정',
+    name: '1분 타자 검정',
+    type: 'test',
+    label: '검정',
+    optional: true,
+    sentences: SENTENCES,
+    duration: 60000,
+    preview: '⏱️ 1분 동안 문장 치기',
+    tip: '1분 동안 문장을 쳐서 타수를 재요. 첫 글자를 치면 시간이 가기 시작해요. 빠르기보다 정확하게!',
+    rounds: [{ title: '1분 검정', hello: '춘?! (준비됐으면 치기 시작!)', count: 30 }],
+  },
 ];
 
 // 입력기에 따라 합쳐질 수 있는 짝. 자리 연습에서는 나란히 두지 않는다.
@@ -208,10 +257,10 @@ export function hasRiskyPair(items) {
   return false;
 }
 
-// 단계 번호: 게임은 번호 없이 '게임', 나머지는 게임을 빼고 센다
+// 단계 번호: label이 있는 단계(게임·검정)는 label, 나머지는 label 없는 단계만 센다
 export function stageNum(i) {
-  if (STAGES[i].type === 'game') return '게임';
-  return `${STAGES.slice(0, i + 1).filter((s) => s.type !== 'game').length}단계`;
+  if (STAGES[i].label) return STAGES[i].label;
+  return `${STAGES.slice(0, i + 1).filter((s) => !s.label).length}단계`;
 }
 
 export function stageTitle(i) {
@@ -221,7 +270,7 @@ export function stageTitle(i) {
 // 한 단계에서 치는 모든 키 (가상 키보드에서 또렷하게 보일 키). 낱말은 키 순서로 풀고 스페이스 포함
 export function stageChars(stage) {
   const set = new Set();
-  if (stage.type === 'words' || stage.type === 'sentences') {
+  if (['words', 'sentences', 'long', 'test'].includes(stage.type)) {
     for (const w of stageItems(stage)) for (const k of toKeys(w)) set.add(k);
     set.add(' ');
   } else if (stage.type === 'game') {
@@ -240,7 +289,9 @@ export function stagePreview(stage) {
 
 // 낱말·문장 단계의 연습 글 목록
 export function stageItems(stage) {
-  return stage.type === 'sentences' ? stage.sentences : Object.keys(stage.words);
+  if (stage.type === 'sentences' || stage.type === 'test') return stage.sentences;
+  if (stage.type === 'long') return stage.lines;
+  return Object.keys(stage.words);
 }
 
 // 낱말·문장 단계를 시작할 때 한 번 섞고, 판마다 count개씩 차례로 쓴다 (모자라면 처음부터 다시)

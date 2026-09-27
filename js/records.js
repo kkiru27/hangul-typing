@@ -13,6 +13,14 @@ export function gogumaFor(acc) {
   return 0;
 }
 
+// 타자 검정: 타수와 정확도 둘 다 넘어야 한다 (둘 중 낮은 쪽). 타수 기준은 초보 눈높이로 잡은 값
+export const TEST_CPM_RULE = [[100, 3], [60, 2], [30, 1]];
+export function gogumaForTest(acc, cpm) {
+  let bySpeed = 0;
+  for (const [min, n] of TEST_CPM_RULE) if ((cpm ?? 0) >= min) { bySpeed = n; break; }
+  return Math.min(bySpeed, gogumaFor(acc));
+}
+
 export function loadRecords() {
   try {
     const r = JSON.parse(localStorage.getItem(KEY) || '{}');
@@ -24,9 +32,8 @@ export function loadRecords() {
 
 // 한 단계를 끝냈을 때 기록을 고치고, 화면에 보여 줄 소식을 돌려준다.
 // cpm: 타수(1분에 맞게 친 키 수). 낱말·문장 단계만 넘긴다.
-export function saveStageResult(records, stageId, acc, cpm = null) {
+export function saveStageResult(records, stageId, acc, cpm = null, goguma = gogumaFor(acc)) {
   const prev = records[stageId] || { best: null, goguma: 0, plays: 0 };
-  const goguma = gogumaFor(acc);
   records[stageId] = {
     best: prev.best == null ? acc : Math.max(prev.best, acc ?? 0),
     goguma: Math.max(prev.goguma, goguma),

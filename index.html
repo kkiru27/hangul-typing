@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>한글 타자 연습</title>
-<link rel="stylesheet" href="css/common.css?v=202609270912">
-<link rel="stylesheet" href="css/app.css?v=202609270912">
-<link rel="stylesheet" href="css/chunsik.css?v=202609270912">
-<link rel="preload" as="image" href="img/chunsik.png?v=202609270912">
-<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270912">
-<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270912">
+<link rel="stylesheet" href="css/common.css?v=202609270917">
+<link rel="stylesheet" href="css/app.css?v=202609270917">
+<link rel="stylesheet" href="css/chunsik.css?v=202609270917">
+<link rel="preload" as="image" href="img/chunsik.png?v=202609270917">
+<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270917">
+<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270917">
 </head>
 <body>
 <!-- 키보드 입력을 받는 숨은 입력칸 (한글 조합은 여기서 일어난다) -->
@@ -25,13 +25,13 @@
         <div class="round-label" id="roundLabel"></div>
         <div class="track" id="track">
           <div class="track-line"><div class="track-fill" id="trackFill"></div></div>
-          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270912" alt="" draggable="false"></div>
+          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270917" alt="" draggable="false"></div>
           <div class="track-goal" id="trackGoal"></div>
         </div>
       </div>
     </div>
     <div class="stats">
-      <div class="stat"><span>진행</span><b id="progress">–</b></div>
+      <div class="stat"><span id="progressLabel">진행</span><b id="progress">–</b></div>
       <div class="stat"><span>정확도</span><b id="accuracy">–</b></div>
       <div class="stat" id="speedStat" hidden><span>타수</span><b id="speed">–</b></div>
     </div>
@@ -66,6 +66,12 @@
       <div class="sentence" id="sentence" hidden>
         <div class="sent-big" id="sentBig"></div>
         <div class="sent-next" id="sentNext"></div>
+      </div>
+      <!-- 긴 글: 앞 줄 · 지금 줄 · 다음 두 줄 -->
+      <div class="story" id="story" hidden>
+        <div class="story-prev" id="storyPrev"></div>
+        <div class="sent-big story-cur" id="storyCur"></div>
+        <div class="story-next" id="storyNext"></div>
       </div>
       <!-- 친 글자가 보이는 입력 막대 (검색창처럼) -->
       <div class="typed-bar" id="typedBar">
@@ -128,6 +134,6 @@
 
 <div class="rotate-hint">아이패드를 <b>가로</b>로 돌려 주세요</div>
 
-<script type="module" src="js/app.js?v=202609270912"></script>
+<script type="module" src="js/app.js?v=202609270917"></script>
 </body>
 </html>

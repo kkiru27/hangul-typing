@@ -49,7 +49,7 @@ const check = (cond, msg) => { console.log(`${cond ? '✔' : '✘'} ${msg}`); if
 await page.goto(`${BASE}/index.html`);
 check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete && el.naturalWidth > 0), '처음 화면 춘식이 이미지 로드');
 check(await page.locator('.stage-card').count() === 6, '단계 지도 한 쪽에 6단계');
-check(await page.locator('#mapPages span').count() === 2, '단계 지도 2쪽');
+check(await page.locator('#mapPages span').count() === 3, '단계 지도 3쪽');
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '0', '처음엔 1단계가 골라져 있음');
 check(await page.locator('.stage-card.locked').count() === 5, '2~6단계는 잠김');
 await page.keyboard.press('ArrowRight');
@@ -177,12 +177,12 @@ check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지
 await page.goto(`${BASE}/index.html?all`);
 resetIme();
 check(await page.locator('.stage-card.locked').count() === 0, '?all → 모든 단계 열림');
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '10', '모두 열리면 마지막 단계(10단계)가 골라져 있음');
-check(await page.locator('.stage-card').count() === 5, '2쪽에는 5개');
-await page.keyboard.press('ArrowUp');   // 10 → 7
-await page.keyboard.press('ArrowUp');   // 7 → 4 (1쪽)
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '4' && await page.locator('.stage-card').count() === 6, '위 방향키로 앞 쪽으로 넘어감');
-await page.keyboard.press('ArrowDown'); // 4 → 7(Shift)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '12', '모두 열리면 마지막 단계(검정)가 골라져 있음');
+check(await page.locator('.stage-card').count() === 1, '3쪽에는 1개');
+for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp']) await page.keyboard.press(k); // 12 → 9 → 6 → 3 (1쪽)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '3' && await page.locator('.stage-card').count() === 6, '위 방향키로 앞 쪽으로 넘어감');
+await page.keyboard.press('ArrowDown');  // 3 → 6
+await page.keyboard.press('ArrowRight'); // 6 → 7(Shift)
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '7', '방향키로 7단계(Shift) 고르기');
 await page.keyboard.press('Enter');
 const t5 = await page.locator('#tiles .tile').allInnerTexts();
@@ -227,7 +227,8 @@ await page.screenshot({ path: `${OUT}/09-test-page.png`, fullPage: true });
 // ── 짧은 글 + 타수 ──
 await page.goto(`${BASE}/index.html?all`);
 resetIme();
-await page.keyboard.press('Enter'); // 마지막 단계 = 10단계 짧은 글
+await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); // 검정 → 긴 글 → 10단계 짧은 글
+await page.keyboard.press('Enter');
 check(await page.locator('#sentence').isVisible() && await page.locator('#speedStat').isVisible(), '짧은 글 화면 + 타수 표시');
 const headH = (await page.locator('.topbar').boundingBox()).height;
 const labelH = Math.max(...await page.locator('.stat span').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height)));
@@ -255,10 +256,52 @@ check((await text('#progress')) === '2/5', '스페이스바로도 다음 문장 
 check((await page.inputValue('#ime')) === '', '다음 문장에서 입력칸 비움');
 await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
 
+// ── 긴 글: 이야기 차례대로 ──
+await page.goto(`${BASE}/index.html?all`);
+resetIme();
+await page.keyboard.press('ArrowLeft'); // 검정 → 11단계 긴 글
+await page.keyboard.press('Enter');
+check(await page.locator('#story').isVisible() && (await text('#roundLabel')).startsWith('11단계'), '긴 글 화면');
+check((await text('#storyPrev')).includes('고구마 밭'), '첫 줄 위에 이야기 제목');
+const storyNow = () => page.locator('#storyCur > span:not(.sent-enter)').evaluateAll((els) => els.map((el) => (el.classList.contains('sp') ? ' ' : el.textContent)).join(''));
+const l1 = await storyNow();
+check(l1 === '춘식이는 고구마를 아주 좋아하는 고양이예요.', `이야기 첫 줄 (${l1})`);
+for (const k of toKeys(l1)) await press(k);
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/17-story.png` });
+await page.keyboard.press('Enter');
+await page.waitForTimeout(100);
+check((await text('#storyPrev')) === l1 && (await storyNow()).startsWith('어느 날 아침'), 'Enter → 다음 줄, 앞 줄은 위로');
+await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+
+// ── 1분 타자 검정: 시계를 빨리 돌려 끝까지 ──
+const page3 = await browser.newPage({ viewport: { width: W, height: H } });
+page3.on('pageerror', (e) => errors.push(String(e)));
+const cdp3 = await page3.context().newCDPSession(page3);
+await page3.clock.install();
+await page3.goto(`${BASE}/index.html?all`);
+await page3.keyboard.press('Enter'); // 마지막 = 검정
+check((await page3.locator('#progressLabel').innerText()) === '남은 시간' && (await page3.locator('#progress').innerText()) === '1:00', '검정: 남은 시간 1:00 (치기 전에는 멈춤)');
+await page3.clock.runFor(5000);
+check((await page3.locator('#progress').innerText()) === '1:00', '첫 키 전에는 시간이 안 감');
+const t3 = await page3.locator('#sentBig > span:not(.sent-enter)').evaluateAll((els) => els.map((el) => (el.classList.contains('sp') ? ' ' : el.textContent)).join(''));
+for (const k of toKeys(t3).slice(0, 6)) { await cdp3.send('Input.insertText', { text: k }); await page3.clock.runFor(1000); }
+check(/^0:5\d$/.test(await page3.locator('#progress').innerText()), `첫 키부터 시간이 감 (${await page3.locator('#progress').innerText()})`);
+await page3.clock.runFor(60000);
+await page3.clock.runFor(1500);
+check(await page3.locator('#resultScreen').isVisible(), '1분 지나면 결과');
+check((await page3.locator('#resultAccLabel').innerText()) === '타수' && /^\d+타$/.test(await page3.locator('#resultAcc').innerText()), `검정 결과: 타수 (${await page3.locator('#resultAcc').innerText()})`);
+check((await page3.locator('#resultRounds').innerText()).includes('정확도'), '검정 결과: 정확도');
+check(await page3.locator('#resultGoguma .goguma.earned').count() === 0 && (await page3.locator('#resultNote').innerText()).includes('30타'), '너무 느리면 검정 고구마 0개 + 기준 안내');
+check((await page3.locator('#progress').innerText()) === '끝', '검정 끝나면 위쪽에 "끝"');
+await page3.waitForTimeout(800);
+await page3.screenshot({ path: `${OUT}/18-test-result.png` });
+await page3.close();
+
 // ── 게임: 고구마 비 ──
 await page.goto(`${BASE}/index.html?all`);
 resetIme();
-await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); // 10 → 7 → 4 → 3 → 게임
+for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowLeft']) await page.keyboard.press(k); // 12 → 9 → 6 → 3 → 게임(2)
 check((await text('#homeChunsik .cs-bubble')).includes('고구마 비'), '게임 카드 고르기');
 await page.keyboard.press('Enter');
 check(await page.locator('#gameScreen').isVisible(), '게임 화면');
@@ -303,7 +346,7 @@ const page2 = await browser.newPage({ viewport: { width: W, height: H } });
 page2.on('pageerror', (e) => errors.push(String(e)));
 await page2.clock.install();
 await page2.goto(`${BASE}/index.html?all`);
-await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowLeft'); await page2.keyboard.press('ArrowLeft');
+for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowLeft']) await page2.keyboard.press(k);
 await page2.keyboard.press('Enter');
 await page2.clock.runFor(100000);
 await page2.clock.runFor(2000);
