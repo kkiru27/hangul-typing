@@ -45,6 +45,7 @@ const check = (cond, msg) => { console.log(`${cond ? '✔' : '✘'} ${msg}`); if
 
 // ── 연습 앱 ──
 await page.goto(`${BASE}/index.html`);
+check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete && el.naturalWidth > 0), '처음 화면 춘식이 이미지 로드');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/01-home.png` });
 await page.keyboard.press('Enter');
@@ -62,12 +63,12 @@ await page.screenshot({ path: `${OUT}/02-play.png` });
 // 틀린 키
 const wrong = ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ'].find((j) => j !== targets[3]);
 await press(wrong);
-check((await text('#message')).includes('Backspace'), '틀리면 Backspace 안내');
+check((await text('#playChunsik .cs-bubble')).includes('Backspace로 지우자'), '틀리면 춘식이가 Backspace 안내');
 check(await page.locator('.key[data-code="Backspace"]').evaluate((el) => el.classList.contains('next')), 'Backspace 키 강조');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/03-miss.png` });
 await press('Backspace');
-check(!(await text('#message')), 'Backspace로 지우면 안내 사라짐');
+check((await text('#playChunsik .cs-bubble')) === '좋아, 다시!', 'Backspace로 지우면 "좋아, 다시!"');
 
 // 영어 모드
 await commit();
@@ -91,8 +92,10 @@ await page.screenshot({ path: `${OUT}/05-fnw.png` });
 
 // 나머지 끝까지
 for (const k of targets.slice(idx)) await press(k);
-await page.waitForTimeout(600);
+await page.waitForTimeout(1400);
 check(await page.locator('#resultScreen').isVisible(), '1판 끝 → 결과 화면');
+check(await page.locator('#track').evaluate((el) => el.classList.contains('done')), '고구마 길 끝까지 감');
+check(await page.locator('#resultChunsik .cs-img').evaluate((el) => el.naturalWidth > 0), '결과 화면 춘식이 이미지 로드');
 console.log('   결과:', (await text('#resultTitle')), (await text('#resultAcc')), (await text('#resultMiss')));
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/06-round-result.png` });
@@ -105,7 +108,7 @@ for (let r = 2; r <= 3; r++) {
   if (r === 2) await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/07-round2.png` });
   for (const k of t) await press(k);
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(1400);
 }
 check((await text('#resultTitle')).includes('1단계'), '3판 끝 → 단계 결과');
 await page.waitForTimeout(500);

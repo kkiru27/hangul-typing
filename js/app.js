@@ -8,12 +8,20 @@ import { STAGES, buildKeysRound } from './lessons.js';
 import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, fingerTone, WASD, ARROWS, ROWS } from './layout.js';
 import { isHangul, objParticle } from './hangul.js';
 import { VERSION } from './version.js';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js';
 
 const $ = (id) => document.getElementById(id);
 
 const keyboard = new KeyboardView($('keyboard'));
 const hands = new HandsView($('hands'));
 const bridge = new InputBridge($('ime'), { onChange, onLatin });
+const homeCs = new Chunsik($('homeChunsik'), { size: 'l' });
+const playCs = new Chunsik($('playChunsik'));
+const resultCs = new Chunsik($('resultChunsik'), { size: 'l' });
+$('trackGoal').innerHTML = GOGUMA_SVG;
+
+const CHEERS = ['좋아!', '잘한다!', '척척!', '최고야!', '멋져!', '우와!'];
+const IDLE_MS = 7000;
 
 const LATIN_BY_CODE = Object.fromEntries(ROWS.flat().filter((k) => k.jamo).map((k) => [k.code, k.label]));
 const NAV_KEYS = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
@@ -25,8 +33,8 @@ const state = {
   judge: null,
   results: [],
   warn: null,          // english | fnw | focus | null
-  lastMiss: null,      // 방금 틀린 키 {key, expect}
-  extraCount: 0,       // 틀린 뒤 지우지 않고 더 친 횟수
+  streak: 0,           // 연속으로 맞힌 키 (춘식이 칭찬용)
+  idleTimer: 0,
 };
 
 // ───── 화면 전환 ─────
@@ -56,6 +64,7 @@ function goHome() {
     .join('');
   keyboard.setFocusSet(null);
   keyboard.setNext(['Enter']);
+  homeCs.say('안녕! 나랑 타자 연습하자');
 }
 
 function startStage() {
@@ -70,9 +79,12 @@ function startRound() {
   const round = stage.rounds[roundIdx];
   const items = buildKeysRound(round);
   state.judge = new Judge(items.join(''));
-  state.lastMiss = null;
-  state.extraCount = 0;
+  state.streak = 0;
   bridge.rebase();
+  playCs.pose('stand');
+  playCs.say(round.hello || '같이 해 보자!');
+  $('track').classList.remove('done');
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
 
   $('stageLabel').textContent = stage.title;
   $('roundLabel').textContent = `${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -83,6 +95,7 @@ function startRound() {
   show('play');
   render();
   checkFocusSoon();
+  resetIdle();
 }
 
 function finishRound() {
@@ -92,7 +105,23 @@ function finishRound() {
   state.screen = last ? 'stageDone' : 'roundDone'; // 입력은 바로 막고, 화면은 잠깐 뒤에
   keyboard.setNext([]);
   hands.setActive([]);
-  setTimeout(() => (last ? showStageResult() : showRoundResult()), 450);
+  clearTimeout(state.idleTimer);
+  playCs.pose('goguma');
+  playCs.act('cheer');
+  playCs.say('고구마 도착!', 'good');
+  $('track').classList.add('done');
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png';
+  setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
+}
+
+// 결과 화면의 춘식이: 잘하면 고구마 먹으며 신나고, 아니면 응원
+function resultChunsik(acc, doneText) {
+  const good = acc != null && acc >= 0.85;
+  resultCs.pose(good ? 'goguma' : 'stand');
+  resultCs.mood(good ? 'party' : null);
+  if (acc >= 0.95) resultCs.say(`${doneText} 고구마 냠냠!`, 'good');
+  else if (good) resultCs.say('맛있다! 잘했어!', 'good');
+  else resultCs.say('괜찮아, 한 번 더 해 보자!');
 }
 
 function showRoundResult() {
@@ -103,6 +132,7 @@ function showRoundResult() {
   $('resultRounds').innerHTML = '';
   $('resultMiss').innerHTML = missText(r.missByKey);
   $('resultNext').textContent = '다음 판';
+  resultChunsik(r.accuracy, '완벽해!');
   keyboard.setNext(['Enter']);
 }
 
@@ -119,6 +149,7 @@ function showStageResult() {
   $('resultRounds').innerHTML = rs.map((r) => `${r.round} <b>${pct(r.accuracy)}</b>`).join(' · ');
   $('resultMiss').innerHTML = missText(miss);
   $('resultNext').textContent = '한 번 더 하기';
+  resultChunsik(acc, '1단계 끝!');
   $('accuracy').textContent = pct(acc);
   keyboard.setNext(['Enter']);
 }
@@ -128,24 +159,31 @@ function showStageResult() {
 function onChange({ keys }) {
   if (state.screen !== 'play') return;
   const { judge } = state;
+  const hadError = judge.hasError;
   const events = judge.update(keys);
+  resetIdle();
   for (const ev of events) {
     if (ev.kind === 'latin') continue;
     if (isHangul(ev.key) && (state.warn === 'english' || state.warn === 'fnw')) setWarn(null);
     const code = keyFor(ev.key)?.code;
     if (ev.kind === 'ok' || ev.kind === 'retype') {
       if (code) keyboard.flash(code, 'ok');
+      playCs.act('hop');
+      hopRunner();
+      if (ev.kind === 'ok' && ++state.streak % 5 === 0) playCs.say(CHEERS[Math.floor(Math.random() * CHEERS.length)], 'good');
     } else if (ev.kind === 'miss') {
       if (code) keyboard.flash(code, 'bad');
-      state.lastMiss = ev;
-      state.extraCount = 0;
+      state.streak = 0;
       shakeCurrentTile();
+      playCs.act('oops');
+      const typed = isHangul(ev.key) ? `${ev.key}${objParticle(ev.key)}` : '다른 키를';
+      playCs.say(`앗! ${ev.expect} 대신 ${typed} 쳤어. ⌫ Backspace로 지우자`, 'bad');
     } else if (ev.kind === 'extra') {
       if (code) keyboard.flash(code, 'bad');
-      state.extraCount++;
+      playCs.say('⌫ Backspace를 먼저 눌러 줘!', 'bad');
     }
   }
-  if (!judge.hasError) { state.lastMiss = null; state.extraCount = 0; }
+  if (hadError && !judge.hasError && !judge.done) playCs.say('좋아, 다시!');
   render();
   if (judge.done) finishRound();
 }
@@ -162,6 +200,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (NAV_KEYS.has(e.key)) e.preventDefault(); // 커서 이동·포커스 이동 막기
 
+  if (state.screen === 'play') resetIdle();
   if (state.screen === 'play' && ARROWS.has(e.key) && !state.judge.hasError) {
     // F65에서 Fn+W가 켜지면 W A S D 자리가 방향키로 바뀐다
     const next = keyFor(state.judge.nextKey)?.code;
@@ -196,9 +235,9 @@ function checkFocusSoon() {
 // ───── 그리기 ─────
 
 const WARNINGS = {
-  english: { icon: '🔤', text: '지금 영어로 입력돼요. Caps Lock을 눌러 한글로 바꿔요' },
-  fnw: { icon: '⌨️', text: 'Fn+W가 눌린 것 같아요. Fn+W를 한 번 더 눌러주세요' },
-  focus: { icon: '👆', text: '화면을 한 번 톡 눌러 주세요' },
+  english: { icon: '🔤', text: '지금 영어로 입력돼요. Caps Lock을 눌러 한글로 바꿔요', chunsik: '어? 영어가 나와!' },
+  fnw: { icon: '⌨️', text: 'Fn+W가 눌린 것 같아요. Fn+W를 한 번 더 눌러주세요', chunsik: '어? 방향키가 나와!' },
+  focus: { icon: '👆', text: '화면을 한 번 톡 눌러 주세요', chunsik: '나를 톡 눌러 줘!' },
 };
 
 function setWarn(kind) {
@@ -210,6 +249,10 @@ function setWarn(kind) {
   if (kind) {
     $('bannerIcon').textContent = WARNINGS[kind].icon;
     $('bannerText').textContent = WARNINGS[kind].text;
+    playCs.act('oops');
+    playCs.say(WARNINGS[kind].chunsik, 'warn');
+  } else if (state.screen === 'play') {
+    playCs.say('');
   }
   if (state.screen === 'play') render();
 }
@@ -232,6 +275,7 @@ function render() {
   });
 
   $('progress').textContent = `${judge.okLen}/${judge.target.length}`;
+  $('track').style.setProperty('--p', judge.okLen / judge.target.length);
   $('accuracy').textContent = pct(judge.accuracy);
 
   // 다음에 칠 키 / 손가락 안내
@@ -264,19 +308,6 @@ function render() {
   $('guideJamo').textContent = guide.big;
   $('guideKey').textContent = guide.small;
   $('guideFinger').textContent = guide.fingerText || FINGER_NAMES[guide.finger] || '';
-
-  // 한 줄 안내
-  const msg = $('message');
-  msg.classList.toggle('bad', judge.hasError);
-  if (judge.hasError && state.lastMiss && state.extraCount === 0) {
-    const { key, expect } = state.lastMiss;
-    const typed = isHangul(key) ? `${key}${objParticle(key)}` : '다른 키를';
-    msg.textContent = `앗, ${expect} 대신 ${typed} 쳤어요. ⌫ Backspace로 지워요`;
-  } else if (judge.hasError) {
-    msg.textContent = '⌫ Backspace를 눌러 틀린 글자를 먼저 지워요';
-  } else {
-    msg.textContent = '';
-  }
 }
 
 // 한 줄에 12개 이하로, 줄마다 개수를 고르게 (20개 → 10+10, 24개 → 12+12)
@@ -286,6 +317,32 @@ function tileRows(n, max = 12) {
   const rows = [];
   for (let a = 0; a < n; a += per) rows.push([a, Math.min(n, a + per)]);
   return rows;
+}
+
+// 한동안 안 치면 춘식이가 어느 손가락인지 알려 준다
+function resetIdle() {
+  clearTimeout(state.idleTimer);
+  state.idleTimer = setTimeout(() => {
+    const { judge } = state;
+    if (state.screen !== 'play' || state.warn || !judge || judge.hasError || judge.done) return;
+    const code = keyFor(judge.nextKey)?.code;
+    const finger = FINGER_NAMES[FINGER_BY_CODE[code]];
+    if (finger) playCs.say(`${withRo(finger)} ${judge.nextKey}!`);
+  }, IDLE_MS);
+}
+
+// 받침에 따라 로/으로 (ㄹ 받침은 '로')
+function withRo(word) {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  const jong = c >= 0 && c < 11172 ? c % 28 : 0;
+  return word + (jong === 0 || jong === 8 ? '로' : '으로');
+}
+
+function hopRunner() {
+  const r = $('trackRunner');
+  r.classList.remove('hop');
+  void r.offsetWidth;
+  r.classList.add('hop');
 }
 
 function currentUnit(judge) {

@@ -1,0 +1,102 @@
+/* 춘식이: 말풍선 + 몸짓 */
+.chunsik {
+  --cs-h: 118px;
+  display: flex; flex-direction: column; align-items: center;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+.chunsik.cs-l { --cs-h: 140px; }
+/* 연습 화면: 말풍선은 춘식이 왼쪽에 (세로 자리를 차지하지 않게) */
+.chunsik.cs-m { position: relative; --cs-h: 104px; }
+.chunsik.cs-m .cs-bubble {
+  position: absolute; right: calc(100% + 14px); top: 6%;
+  margin: 0; width: max-content; max-width: 250px;
+  white-space: normal; text-align: center; line-height: 1.35;
+}
+.chunsik.cs-m .cs-bubble[hidden] { display: none; }
+.chunsik.cs-m .cs-bubble::after { left: auto; right: -8.5px; bottom: auto; top: calc(50% - 6px); transform: rotate(-45deg); }
+
+.cs-body { position: relative; animation: cs-bob 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.chunsik.party .cs-body { animation: cs-party .9s ease-in-out infinite; }
+.cs-img {
+  display: block; height: var(--cs-h); width: auto;
+  transform-origin: 50% 90%;
+  -webkit-user-drag: none; user-select: none; -webkit-user-select: none;
+}
+/* 서 있는 그림은 여백이 넓어서 조금 크게 */
+.chunsik:not([data-pose="goguma"]) .cs-img { height: calc(var(--cs-h) * 1.18); margin: calc(var(--cs-h) * -.09) 0; }
+.cs-img.hop   { animation: cs-hop .34s ease-out; }
+.cs-img.oops  { animation: cs-oops .5s ease-in-out; }
+.cs-img.cheer { animation: cs-cheer .8s ease-in-out 2; }
+
+.cs-fx { position: absolute; top: 4%; right: 2%; font-size: calc(var(--cs-h) * .22); opacity: 0; }
+.cs-fx.show { animation: cs-fx 1s ease-out; }
+
+/* 말풍선 (빈 칸도 자리를 차지해서 화면이 흔들리지 않게) */
+.cs-bubble {
+  position: relative;
+  margin-bottom: 10px;
+  padding: 6px 14px;
+  background: #fff;
+  border: 2.5px solid #e8d6bf;
+  border-radius: 16px;
+  font-size: 17px; font-weight: 800;
+  white-space: nowrap;
+  color: var(--ink);
+  box-shadow: 0 4px 10px rgba(120, 80, 40, .08);
+}
+.cs-bubble[hidden] { display: block; visibility: hidden; }
+.cs-bubble::after {
+  content: ""; position: absolute; left: calc(50% - 7px); bottom: -8.5px;
+  width: 12px; height: 12px;
+  background: #fff;
+  border-right: 2.5px solid; border-bottom: 2.5px solid; border-color: inherit;
+  transform: rotate(45deg);
+}
+.cs-bubble[data-tone="good"] { border-color: #9ad7b3; color: #16734b; }
+.cs-bubble[data-tone="bad"]  { border-color: #f3a3a6; color: var(--bad); }
+.cs-bubble[data-tone="warn"] { border-color: #f0c24b; color: var(--warn-ink); }
+.cs-bubble.pop { animation: cs-pop .25s ease-out; }
+.cs-l .cs-bubble { font-size: 20px; padding: 8px 18px; }
+
+@keyframes cs-bob   { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes cs-party { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-14px) rotate(-6deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-14px) rotate(6deg); } }
+@keyframes cs-hop   { 0% { transform: none; } 30% { transform: scale(1.05, .92); } 60% { transform: translateY(-16px) scale(.97, 1.04); } 100% { transform: none; } }
+@keyframes cs-oops  { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-10deg); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(3deg); } }
+@keyframes cs-cheer { 0%, 100% { transform: none; } 25% { transform: translateY(-22px) rotate(-8deg); } 50% { transform: none; } 75% { transform: translateY(-22px) rotate(8deg); } }
+@keyframes cs-fx    { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-14px); } }
+@keyframes cs-pop   { 0% { transform: scale(.85); } 70% { transform: scale(1.05); } 100% { transform: none; } }
+
+/* 고구마까지 가는 길 */
+.round-head { display: flex; align-items: center; gap: 18px; }
+.track { position: relative; width: 380px; height: 44px; }
+.track-line {
+  position: absolute; left: 16px; right: 40px; top: 50%;
+  height: 10px; margin-top: -1px;
+  background: #efe3d3; border-radius: 5px; overflow: hidden;
+}
+.track-fill { height: 100%; width: calc(var(--p, 0) * 100%); background: linear-gradient(90deg, #ffd166, #ff9f68); transition: width .25s; }
+.track-runner {
+  position: absolute; top: -2px;
+  left: calc(var(--p, 0) * (100% - 76px));
+  transition: left .25s;
+}
+.track-runner img { display: block; height: 46px; -webkit-user-drag: none; }
+.track-runner.hop img { animation: cs-hop .3s ease-out; }
+.track-goal { position: absolute; right: 0; top: 4px; width: 46px; transition: transform .3s, opacity .3s; }
+.track-goal .goguma { width: 100%; display: block; animation: cs-bob 1.8s ease-in-out infinite; }
+.track.done .track-goal { transform: scale(.2); opacity: 0; }
+
+.home-row, .result-row { display: flex; align-items: center; gap: 26px; }
+
+@media (max-height: 700px) {
+  .chunsik.cs-m { --cs-h: 86px; }
+  .chunsik.cs-l { --cs-h: 104px; }
+  .cs-bubble { font-size: 15px; padding: 4px 12px; margin-bottom: 8px; }
+  .track { height: 38px; }
+  .track-runner img { height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-body, .chunsik.party .cs-body, .cs-img, .track-goal .goguma { animation: none !important; }
+}

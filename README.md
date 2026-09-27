@@ -25,7 +25,15 @@
 | `js/layout.js` | F65 배열, 두벌식 자모, 손가락 배정 |
 | `js/keyboard-view.js`, `js/hands-view.js` | 가상 키보드, 손 그림 |
 | `js/lessons.js` | 단계 데이터 (새 단계는 여기에 추가) |
+| `js/chunsik-view.js`, `css/chunsik.css` | 춘식이 말풍선·몸짓, 고구마까지 가는 길 |
 | `js/app.js` | 화면 흐름 |
+
+## 춘식이 그림
+
+- `img/chunsik.png` 서 있는 모습 (처음 화면, 연습 화면)
+- `img/chunsik-goguma.png` 고구마 먹는 모습 (판 끝, 잘했을 때 결과 화면)
+- 새 그림의 흰 배경은 `tools/cutout.py`로 지운다. 이미지 가장자리에서 시작하는 flood fill이라
+  윤곽선 안에 갇힌 흰색(춘식이 코)은 지워지지 않는다.
 
 ## 확인
 
