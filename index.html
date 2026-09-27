@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>한글 타자 연습</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<!-- 키보드 입력을 받는 숨은 입력칸 (한글 조합은 여기서 일어난다) -->
+<input id="ime" class="ime-hidden" type="text" autocomplete="off" autocorrect="off" autocapitalize="off"
+       spellcheck="false" aria-label="타자 입력">
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">한글 타자 연습</div>
+    <div class="stage-label" id="stageLabel"></div>
+    <div class="stats">
+      <div class="stat"><span>진행</span><b id="progress">–</b></div>
+      <div class="stat"><span>정확도</span><b id="accuracy">–</b></div>
+    </div>
+  </header>
+
+  <main class="stage-area">
+    <div id="banner" class="banner" hidden>
+      <span class="banner-icon" id="bannerIcon"></span>
+      <span id="bannerText"></span>
+    </div>
+
+    <!-- 처음 화면 -->
+    <section id="homeScreen" class="screen home">
+      <h1>한글 타자 연습</h1>
+      <div class="home-card">
+        <div class="home-card-title" id="homeStageTitle"></div>
+        <div class="home-keys" id="homeKeys"></div>
+        <p class="home-tip" id="homeTip"></p>
+      </div>
+      <ul class="checklist">
+        <li>키보드가 아이패드에 연결됐나요?</li>
+        <li>한글이 안 나오면 <b>Caps Lock</b>을 한 번 눌러요.</li>
+      </ul>
+      <p class="press-enter"><kbd>Enter ⏎</kbd> 를 누르면 시작해요</p>
+      <a class="test-link" href="test.html">입력 테스트 페이지 →</a>
+      <span class="version" id="version"></span>
+    </section>
+
+    <!-- 연습 화면 -->
+    <section id="playScreen" class="screen play" hidden>
+      <div class="round-label" id="roundLabel"></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="guide">
+        <div class="guide-card" id="guideCard">
+          <div class="guide-jamo" id="guideJamo"></div>
+          <div class="guide-key" id="guideKey"></div>
+        </div>
+        <div class="guide-side">
+          <div class="guide-finger" id="guideFinger"></div>
+          <div class="hands" id="hands"></div>
+        </div>
+      </div>
+      <div class="message" id="message"></div>
+    </section>
+
+    <!-- 판 끝 / 단계 끝 -->
+    <section id="resultScreen" class="screen result" hidden>
+      <div class="result-card">
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-acc"><span>정확도</span><b id="resultAcc"></b></div>
+        <div class="result-rounds" id="resultRounds"></div>
+        <div class="result-miss" id="resultMiss"></div>
+        <p class="press-enter"><kbd>Enter ⏎</kbd> <span id="resultNext"></span></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="kbd-area">
+    <div id="keyboard"></div>
+  </footer>
+</div>
+
+<div class="rotate-hint">아이패드를 <b>가로</b>로 돌려 주세요</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

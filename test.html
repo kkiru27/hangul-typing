@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>한글 입력 테스트</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/test.css">
+</head>
+<body>
+<header class="t-head">
+  <h1>한글 입력 판정 테스트</h1>
+  <a href="index.html">← 연습 앱으로</a>
+</header>
+
+<main class="t-main">
+  <section class="t-left">
+    <div class="panel">
+      <h2>1. 목표 글 고르기</h2>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="panel">
+      <h2>2. 아래 칸에 그대로 쳐 보기</h2>
+      <div class="target" id="target"></div>
+      <input id="ime" class="t-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false" placeholder="여기를 누르거나 Enter를 누르고 입력" aria-label="테스트 입력">
+      <div class="raw" id="raw"></div>
+      <div class="keys-compare">
+        <div class="kc-row"><span class="kc-label">목표 키</span><div class="kc-cells" id="kcTarget"></div></div>
+        <div class="kc-row"><span class="kc-label">친 키</span><div class="kc-cells" id="kcTyped"></div></div>
+      </div>
+      <div class="judge-stats" id="judgeStats"></div>
+      <div class="controls">
+        <button id="btnReset">처음부터</button>
+        <label><input type="checkbox" id="optHide"> 앱처럼 입력칸 숨기기</label>
+        <label><input type="checkbox" id="optStrip" checked> 영문 자동 지우기(앱과 같게)</label>
+        <label><input type="checkbox" id="optBlock"> 실험: A(ㅁ) 키 막아 보기</label>
+      </div>
+    </div>
+  </section>
+
+  <section class="t-right">
+    <div class="panel">
+      <h2>3. 자동 점검 결과</h2>
+      <p class="hint">위에서 여러 글을 쳐 보고, 영어 모드(Caps Lock)·방향키·Backspace도 한 번씩 눌러 보세요.</p>
+      <table class="checks" id="checks"></table>
+      <div class="controls">
+        <button id="btnCopy" class="primary">결과 복사하기</button>
+        <button id="btnClear">로그 지우기</button>
+      </div>
+      <p class="hint" id="copyMsg"></p>
+      <textarea id="copyFallback" class="copy-fallback" hidden readonly></textarea>
+    </div>
+  </section>
+
+  <section class="panel t-log">
+    <h2>4. 이벤트 기록 <small>(최근 것이 위)</small></h2>
+    <div class="log-wrap">
+      <table class="log">
+        <thead><tr><th>ms</th><th>이벤트</th><th>key</th><th>code</th><th>keyCode</th><th>조합중</th><th>inputType</th><th>data</th><th>입력칸 값</th></tr></thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="js/test-page.js"></script>
+</body>
+</html>

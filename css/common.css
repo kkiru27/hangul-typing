@@ -1,0 +1,168 @@
+/* 공통: 색, 가상 키보드, 손 그림 */
+:root {
+  --bg: #fff7ec;
+  --card: #ffffff;
+  --ink: #3a2e2a;
+  --muted: #8c7b72;
+  --line: #eadbc8;
+  --accent: #ff7a59;
+  --ok: #23a26a;
+  --bad: #e5484d;
+  --warn-bg: #ffe9a8;
+  --warn-ink: #6b4a00;
+
+  /* 손가락 색 (양손 같은 손가락은 같은 색) */
+  --pinky: #ec6a9c;  --pinky-soft: #fde3ee;
+  --ring: #f59a3c;   --ring-soft: #ffebd6;
+  --middle: #5fb345; --middle-soft: #e4f4da;
+  --index: #3e9be9;  --index-soft: #ddeefc;
+  --thumb: #9a6ad6;  --thumb-soft: #eee4fa;
+  --none: #bdb2a8;   --none-soft: #f1ece6;
+
+  font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); }
+button, a { font: inherit; }
+
+.tone-pinky  { --c: var(--pinky);  --c-soft: var(--pinky-soft); }
+.tone-ring   { --c: var(--ring);   --c-soft: var(--ring-soft); }
+.tone-middle { --c: var(--middle); --c-soft: var(--middle-soft); }
+.tone-index  { --c: var(--index);  --c-soft: var(--index-soft); }
+.tone-thumb  { --c: var(--thumb);  --c-soft: var(--thumb-soft); }
+.tone-none   { --c: var(--none);   --c-soft: var(--none-soft); }
+
+/* 숨은 입력칸: 포커스는 받되 보이지 않게. 16px 미만이면 iOS가 확대한다 */
+.ime-hidden {
+  position: fixed; top: 0; left: 0;
+  width: 2px; height: 2px;
+  opacity: 0; border: 0; padding: 0; margin: 0;
+  font-size: 16px; color: transparent; background: transparent; caret-color: transparent;
+  pointer-events: none;
+}
+
+kbd {
+  display: inline-block;
+  padding: .15em .6em;
+  border: 1.5px solid var(--line);
+  border-bottom-width: 4px;
+  border-radius: .5em;
+  background: var(--card);
+  font-family: inherit;
+  font-weight: 700;
+}
+
+/* ───── 가상 키보드 ───── */
+.kbd {
+  --u: min(calc((100vw - 28px) / 16), 74px);
+  --gap: 5px;
+  --kh: min(calc(var(--u) * .8), 7.4dvh);
+  width: calc(var(--u) * 16);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.kbd-row { display: flex; gap: var(--gap); }
+.key {
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(var(--u) * var(--w) - var(--gap));
+  height: var(--kh);
+  border-radius: 9px;
+  background: var(--c-soft);
+  border: 1.5px solid rgba(90, 60, 40, .12);
+  border-bottom: 4px solid var(--c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .2s, transform .12s, background .15s;
+}
+.key.nav { --c: var(--none); --c-soft: #f7f3ee; }
+.key .k-main { font-size: calc(var(--kh) * .42); font-weight: 700; line-height: 1; }
+.key.sym .k-main { font-size: calc(var(--kh) * .36); }
+.key .k-latin { position: absolute; top: 4px; left: 6px; font-size: calc(var(--kh) * .2); color: var(--muted); font-weight: 600; }
+.key .k-shift { position: absolute; top: 4px; right: 6px; font-size: calc(var(--kh) * .22); color: var(--muted); }
+.key.sym .k-shift { right: auto; left: 6px; }
+.key.mod { flex-direction: column; gap: 1px; }
+.key .k-label { font-size: calc(var(--kh) * .22); font-weight: 600; color: #5d4f48; white-space: nowrap; }
+.key .k-icon { font-size: calc(var(--kh) * .3); line-height: 1; color: #5d4f48; }
+.key .k-hint { font-size: calc(var(--kh) * .18); color: var(--muted); }
+/* ㄹ(F)·ㅓ(J) 볼록 표시 */
+.key.bump::after {
+  content: ""; position: absolute; bottom: 6px; left: 50%;
+  width: 26%; height: 3px; margin-left: -13%;
+  border-radius: 2px; background: currentColor; opacity: .55;
+}
+.key.dim { opacity: .38; }
+
+/* 다음에 칠 키 */
+.key.next {
+  opacity: 1;
+  background: var(--c);
+  border-color: var(--c);
+  color: #fff;
+  transform: translateY(-3px);
+  z-index: 1;
+}
+.key.next::before, .key.next-warn::before {
+  content: ""; position: absolute; inset: -7px;
+  border-radius: 14px; border: 3px solid var(--c);
+  animation: ring 1.1s ease-out infinite;
+  pointer-events: none;
+}
+.key.next-warn::before { border-color: #ffaa00; }
+.key.next .k-latin, .key.next .k-shift, .key.next .k-label, .key.next .k-icon, .key.next .k-hint { color: rgba(255,255,255,.9); }
+.key.next-warn {
+  opacity: 1;
+  background: #ffc53d;
+  border-color: #c98a00;
+  transform: translateY(-3px);
+  z-index: 1;
+}
+@keyframes ring {
+  0%   { opacity: .95; transform: scale(.94); }
+  100% { opacity: 0;   transform: scale(1.1); }
+}
+
+/* 누른 키 반짝임 */
+.key.flash-ok    { animation: flash-ok .45s ease-out; }
+.key.flash-bad   { animation: flash-bad .45s ease-out; }
+.key.flash-press { animation: flash-press .3s ease-out; }
+@keyframes flash-ok {
+  0%   { background: var(--ok); color: #fff; transform: translateY(2px) scale(.97); }
+  100% { }
+}
+@keyframes flash-bad {
+  0%   { background: var(--bad); color: #fff; transform: translateX(0); }
+  25%  { transform: translateX(-4px); }
+  50%  { transform: translateX(4px); }
+  75%  { transform: translateX(-2px); }
+  100% { }
+}
+@keyframes flash-press {
+  0%   { transform: translateY(2px) scale(.97); filter: brightness(.9); }
+  100% { }
+}
+
+/* ───── 손 그림 ───── */
+.hands-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.hands-svg .palm { fill: #f6e4d6; stroke: #e7cdb9; stroke-width: 1.5; }
+.hands-svg .finger { fill: var(--c-soft); stroke: var(--c); stroke-width: 2; transition: fill .15s, opacity .15s; }
+.hands.has-active .finger { opacity: .45; }
+.hands.has-active .finger.active {
+  opacity: 1;
+  fill: var(--c);
+  stroke: #3a2e2a;
+  stroke-width: 2.5;
+}
+.hands-svg .hand-label { font-size: 13px; fill: var(--muted); text-anchor: middle; font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .key.next::before, .key.next-warn::before { animation: none; }
+}
