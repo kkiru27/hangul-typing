@@ -1,14 +1,15 @@
 // 한글 타자 연습 앱 (1차: 자리 연습 1단계)
 
-import { Judge } from './judge.js';
-import { InputBridge } from './input-bridge.js';
-import { KeyboardView } from './keyboard-view.js';
-import { HandsView } from './hands-view.js';
-import { STAGES, buildKeysRound } from './lessons.js';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, fingerTone, WASD, ARROWS, ROWS } from './layout.js';
-import { isHangul, objParticle } from './hangul.js';
-import { VERSION } from './version.js';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js';
+import { Judge } from './judge.js?v=202609270822';
+import { InputBridge } from './input-bridge.js?v=202609270822';
+import { KeyboardView } from './keyboard-view.js?v=202609270822';
+import { HandsView } from './hands-view.js?v=202609270822';
+import { STAGES, buildKeysRound } from './lessons.js?v=202609270822';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, fingerTone, WASD, ARROWS, ROWS } from './layout.js?v=202609270822';
+import { isHangul, objParticle } from './hangul.js?v=202609270822';
+import { VERSION } from './version.js?v=202609270822';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609270822';
+import { checkForUpdate } from './update-check.js?v=202609270822';
 
 const $ = (id) => document.getElementById(id);
 
@@ -87,7 +88,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609270822';
 
   $('stageLabel').textContent = stage.title;
   $('roundLabel').textContent = `${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -113,7 +114,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609270822';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -384,3 +385,4 @@ function missText(miss) {
 
 $('version').textContent = VERSION;
 goHome();
+checkForUpdate();
