@@ -6,7 +6,7 @@
 // 조합 중에 입력칸 값을 코드로 고치면 iOS에서 글자가 겹쳐 들어가는 문제가 있어서,
 // 값을 비우는 일은 조합 중이 아닐 때만 한다. 조합 중이면 "여기서부터 새 판" 위치(base)만 옮긴다.
 
-import { toKeys } from './hangul.js?v=202609270844';
+import { toKeys } from './hangul.js?v=202609270855';
 
 const LATIN_G = /[A-Za-z]/g;
 
@@ -19,6 +19,7 @@ export class InputBridge {
     this.stripLatin = stripLatin;
     this.composing = false;
     this.base = 0;
+    this.pendingClear = false; // 조합 중이라 못 비운 입력칸을 조합이 끝나면 비운다
     this.lastRaw = el.value;
 
     el.addEventListener('compositionstart', () => { this.composing = true; });
@@ -44,6 +45,15 @@ export class InputBridge {
 
   sync() {
     let raw = this.el.value;
+    if (this.pendingClear && !this.composing) {
+      // 새 판(낱말) 시작 뒤로 아직 아무것도 안 쳤으면 비운다. 이미 쳤으면 base로 충분하니 그대로 둔다.
+      this.pendingClear = false;
+      if (toKeys(raw).length <= this.base) {
+        this.el.value = raw = '';
+        this.base = 0;
+        this.lastRaw = '';
+      }
+    }
     if (/[A-Za-z]/.test(raw)) {
       // 영어 모드로 친 글자: 오타로 세지 않고 알려만 준다.
       // 영문은 조합이 없으니 조합 중이 아닐 때 바로 지워도 안전하다.
@@ -61,14 +71,17 @@ export class InputBridge {
   }
 
   // 새 판 시작: 지금까지 입력된 것은 무시한다.
+  // 입력기에 따라 스페이스·Enter를 친 순간(input)에는 아직 조합 중이고 compositionend가 뒤에 오기도 한다.
   rebase() {
     if (!this.composing) {
       this.el.value = '';
       this.lastRaw = '';
       this.base = 0;
+      this.pendingClear = false;
     } else {
       this.lastRaw = this.el.value;
       this.base = toKeys(this.el.value).length;
+      this.pendingClear = true;
     }
   }
 }

@@ -1,20 +1,48 @@
 // 연습 단계 데이터.
 //
-// type
-//   'keys'      자리 연습: 자모·숫자·문장부호를 하나씩 친다
-//   'words'     낱말 연습        ┐ 다음에 추가.
-//   'sentences' 짧은 문장 연습   │ 목표 글을 Judge에 그대로 넘기면 판정은 같다.
-//   'long'      긴 글 연습       ┘
-// 연습 글은 모두 직접 지은 것만 쓴다.
+// 단계는 배우는 순서대로 한 줄로 늘어선다 (자리 연습 사이사이에 배운 자리로만 만든 낱말 연습).
+// 단계 번호는 순서에서 나온다(stageTitle). 기록은 id로 저장하니 순서를 바꿔도 기록은 유지된다.
 //
-// 자리 연습 한 판(round): intro(정해진 순서) + 나머지는 pool에서 무작위, 모두 length개.
+// type
+//   'keys'   자리 연습: 자모·숫자·문장부호를 하나씩 친다
+//            한 판(round): intro(정해진 순서) + 나머지는 pool에서 무작위, 모두 length개
+//   'words'  낱말 연습: 낱말을 치고 스페이스바로 다음 낱말. 한 판에 count개
+//   (다음) 'sentences' 짧은 글, 'long' 긴 글
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
+// 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
+
+import { toKeys } from './hangul.js?v=202609270855';
+
+// 낱말 → 그림 (그림이 없으면 빈칸)
+// 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말
+const WORDS_HOME = {
+  엄마: '👩', 이모: '👩', 언니: '👧', 할머니: '👵', 아이: '🧒', 어린이: '🧒', 하마: '🦛', 호랑이: '🐯',
+  오리: '🦆', 오이: '🥒', 미나리: '🌿', 머리: '💇', 이마: '', 허리: '', 나이: '🎂', 하나: '☝️',
+  멍멍: '🐶', 엉엉: '😭', 하하: '😆', 호호: '😊', 놀이: '🎠', 말: '🐴', 알: '🥚',
+};
+// + 윗줄(ㅂㅈㄷㄱㅅ ㅛㅕㅑㅐㅔ)
+const WORDS_TOP = {
+  고양이: '🐱', 강아지: '🐶', 사자: '🦁', 개: '🐕', 새: '🐦', 병아리: '🐤', 거미: '🕷️', 오징어: '🦑',
+  가방: '🎒', 신발: '👟', 사과: '🍎', 바나나: '🍌', 비행기: '✈️', 배: '🚢', 별: '⭐', 달: '🌙',
+  해: '☀️', 가게: '🏪', 모자: '🧢', 안경: '👓', 양말: '🧦', 학교: '🏫', 선생님: '🧑‍🏫', 봄: '🌷',
+  바다: '🌊', 산: '⛰️', 나비: '🦋', 개미: '🐜', 사랑: '❤️', 생일: '🎂', 아기: '👶', 지갑: '👛',
+  가지: '🍆', 감자: '🥔', 고기: '🍖', 야옹: '🐱', 냠냠: '😋', 베개: '🛏️',
+};
+// + 아랫줄(ㅋㅌㅊㅍㅠㅜㅡ)과 Shift(ㅃㅉㄸㄲㅆㅒㅖ)
+const WORDS_ALL = {
+  고구마: '🍠', 춘식이: '🐱', 토끼: '🐰', 코끼리: '🐘', 기차: '🚂', 자동차: '🚗', 포도: '🍇', 딸기: '🍓',
+  수박: '🍉', 우유: '🥛', 컴퓨터: '💻', 키보드: '⌨️', 친구: '🤝', 가족: '👪', 선물: '🎁', 겨울: '⛄',
+  여름: '🌞', 가을: '🍂', 하늘: '🌤️', 구름: '☁️', 무지개: '🌈', 눈사람: '⛄', 빵: '🍞', 아빠: '👨',
+  까치: '🐦', 꽃: '🌸', 도토리: '🌰', 다람쥐: '🐿️', 거북이: '🐢', 시계: '⏰', 쌀: '🍚', 떡: '🍡', 짜장면: '🍜',
+};
+
+const WORD_TIP = '낱말을 다 치면 스페이스바를 엄지로 눌러 다음 낱말로 가요.';
 
 export const STAGES = [
   {
     id: 'keys-home',
-    title: '1단계 · 기본자리',
-    short: '기본자리',
+    group: '자리 연습',
+    name: '기본자리',
     type: 'keys',
     keys: ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ', 'ㅗ', 'ㅓ', 'ㅏ', 'ㅣ'],
     tip: '왼손은 ㅁ ㄴ ㅇ ㄹ, 오른손은 ㅓ ㅏ ㅣ 위에 올려요. ㄹ과 ㅓ에는 볼록한 표시가 있어요.',
@@ -25,9 +53,22 @@ export const STAGES = [
     ],
   },
   {
+    id: 'words-home',
+    group: '낱말 연습',
+    name: '기본자리 낱말',
+    type: 'words',
+    words: WORDS_HOME,
+    tip: WORD_TIP,
+    rounds: [
+      { title: '낱말 첫걸음', hello: '춘! 춘춘! (이제 낱말을 쳐 보자!)', count: 8 },
+      { title: '낱말 두 번째', hello: '츈츈~ (스페이스바는 엄지로!)', count: 8 },
+      { title: '낱말 세 번째', hello: '춘춘춘!! (거의 다 왔어!)', count: 8 },
+    ],
+  },
+  {
     id: 'keys-top-left',
-    title: '2단계 · 왼손 윗줄',
-    short: '왼손 윗줄',
+    group: '자리 연습',
+    name: '왼손 윗줄',
     type: 'keys',
     keys: ['ㅂ', 'ㅈ', 'ㄷ', 'ㄱ', 'ㅅ'],
     tip: '기본자리에서 손가락을 위로 쭉 뻗었다가 다시 기본자리로 돌아와요.',
@@ -39,8 +80,8 @@ export const STAGES = [
   },
   {
     id: 'keys-top-right',
-    title: '3단계 · 오른손 윗줄',
-    short: '오른손 윗줄',
+    group: '자리 연습',
+    name: '오른손 윗줄',
     type: 'keys',
     keys: ['ㅛ', 'ㅕ', 'ㅑ', 'ㅐ', 'ㅔ'],
     tip: '오른손을 위로 뻗어요. ㅛ는 검지를 왼쪽 위로, ㅔ는 새끼손가락으로 쳐요.',
@@ -51,9 +92,22 @@ export const STAGES = [
     ],
   },
   {
+    id: 'words-top',
+    group: '낱말 연습',
+    name: '윗줄 낱말',
+    type: 'words',
+    words: WORDS_TOP,
+    tip: WORD_TIP,
+    rounds: [
+      { title: '동물과 물건', hello: '춘! (윗줄 글자로 낱말 만들기!)', count: 8 },
+      { title: '여러 낱말', hello: '츈츈~ (천천히 정확하게!)', count: 8 },
+      { title: '마지막 판', hello: '춘춘춘!! (고구마가 보인다!)', count: 8 },
+    ],
+  },
+  {
     id: 'keys-bottom',
-    title: '4단계 · 아랫줄',
-    short: '아랫줄',
+    group: '자리 연습',
+    name: '아랫줄',
     type: 'keys',
     keys: ['ㅋ', 'ㅌ', 'ㅊ', 'ㅍ', 'ㅠ', 'ㅜ', 'ㅡ'],
     tip: '손가락을 아래로 살짝 굽혀요. ㅠ는 왼손 검지, ㅜ와 ㅡ는 오른손 검지로 쳐요.',
@@ -65,8 +119,8 @@ export const STAGES = [
   },
   {
     id: 'keys-shift',
-    title: '5단계 · Shift',
-    short: 'Shift 글자',
+    group: '자리 연습',
+    name: 'Shift 글자',
     type: 'keys',
     keys: ['ㅃ', 'ㅉ', 'ㄸ', 'ㄲ', 'ㅆ', 'ㅒ', 'ㅖ'],
     tip: 'Shift를 반대쪽 새끼손가락으로 누른 채 쳐요. 왼손 글자는 오른쪽 Shift, 오른손 글자는 왼쪽 Shift!',
@@ -77,9 +131,22 @@ export const STAGES = [
     ],
   },
   {
+    id: 'words-all',
+    group: '낱말 연습',
+    name: '모든 자리 낱말',
+    type: 'words',
+    words: WORDS_ALL,
+    tip: WORD_TIP,
+    rounds: [
+      { title: '맛있는 낱말', hello: '춘춘! (고구마도 나올까?)', count: 8 },
+      { title: '여러 낱말', hello: '츈츈~ (Shift 글자도 있어!)', count: 8 },
+      { title: '마지막 판', hello: '춘춘춘!! (다 칠 수 있어!)', count: 8 },
+    ],
+  },
+  {
     id: 'keys-number',
-    title: '6단계 · 숫자·문장부호',
-    short: '숫자·부호',
+    group: '자리 연습',
+    name: '숫자·부호',
     type: 'keys',
     keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', ',', '?', '!'],
     tip: '숫자 줄은 멀어요. 손가락을 크게 뻗었다가 기본자리로 돌아와요. ? 와 ! 는 Shift와 함께!',
@@ -89,7 +156,6 @@ export const STAGES = [
       { title: '문장부호', hello: '춘춘?! (점, 쉼표, 물음표, 느낌표!)', intro: '.,.,?!', pool: '.,?!1234567890', length: 20 },
     ],
   },
-  // 다음: { id: 'words-1', title: '낱말 연습', type: 'words', ... }
 ];
 
 // 입력기에 따라 합쳐질 수 있는 짝. 자리 연습에서는 나란히 두지 않는다.
@@ -104,11 +170,45 @@ export function hasRiskyPair(items) {
   return false;
 }
 
-// 한 단계에서 쓰는 모든 글자 (가상 키보드에서 또렷하게 보일 키)
+export function stageNum(i) {
+  return `${i + 1}단계`;
+}
+
+export function stageTitle(i) {
+  return `${stageNum(i)} · ${STAGES[i].name}`;
+}
+
+// 한 단계에서 치는 모든 키 (가상 키보드에서 또렷하게 보일 키). 낱말은 키 순서로 풀고 스페이스 포함
 export function stageChars(stage) {
   const set = new Set();
-  for (const r of stage.rounds) for (const ch of (r.intro + r.pool).replace(/\s/g, '')) set.add(ch);
+  if (stage.type === 'words') {
+    for (const w of Object.keys(stage.words)) for (const k of toKeys(w)) set.add(k);
+    set.add(' ');
+  } else {
+    for (const r of stage.rounds) for (const ch of (r.intro + r.pool).replace(/\s/g, '')) set.add(ch);
+  }
   return [...set];
+}
+
+// 단계 카드에 보일 미리보기
+export function stagePreview(stage) {
+  return stage.type === 'words' ? Object.keys(stage.words).slice(0, 4).join(' ') : stage.keys.join(' ');
+}
+
+// 낱말 단계를 시작할 때 한 번 섞고, 판마다 count개씩 차례로 쓴다 (모자라면 처음부터 다시)
+export function shuffleWords(stage, rand = Math.random) {
+  const list = Object.keys(stage.words);
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+export function wordsForRound(order, stage, roundIdx) {
+  const before = stage.rounds.slice(0, roundIdx).reduce((n, r) => n + r.count, 0);
+  const { count } = stage.rounds[roundIdx];
+  return Array.from({ length: count }, (_, i) => order[(before + i) % order.length]);
 }
 
 // 자리 연습 한 판의 목록 만들기: intro(정해진 순서) + 나머지는 무작위

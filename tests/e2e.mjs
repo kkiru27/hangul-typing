@@ -4,6 +4,7 @@
 
 import { createRequire } from 'node:module';
 import { ImeSim } from './ime-sim.mjs';
+import { toKeys } from '../js/hangul.js';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -47,7 +48,8 @@ const check = (cond, msg) => { console.log(`${cond ? '✔' : '✘'} ${msg}`); if
 // ── 연습 앱 ──
 await page.goto(`${BASE}/index.html`);
 check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete && el.naturalWidth > 0), '처음 화면 춘식이 이미지 로드');
-check(await page.locator('.stage-card').count() === 6, '단계 지도에 6단계');
+check(await page.locator('.stage-card').count() === 6, '단계 지도 한 쪽에 6단계');
+check(await page.locator('#mapPages span').count() === 2, '단계 지도 2쪽');
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '0', '처음엔 1단계가 골라져 있음');
 check(await page.locator('.stage-card.locked').count() === 5, '2~6단계는 잠김');
 await page.keyboard.press('ArrowRight');
@@ -141,13 +143,30 @@ await page.reload();
 check(await page.locator('.stage-card[data-idx="1"]').evaluate((el) => !el.classList.contains('locked')), '새로고침해도 기록 유지(2단계 열림)');
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '새로 열어도 가장 뒤 열린 단계가 골라짐');
 
-// 2단계: 윗줄 글자만 나옴, Esc 두 번으로 나가기
+// 2단계: 낱말 연습 (낱말 + 스페이스), Esc 두 번으로 나가기
 await page.keyboard.press('Enter');
 resetIme();
-const t2 = await page.locator('#tiles .tile').allInnerTexts();
-check(t2.every((c) => 'ㅂㅈㄷㄱㅅㅁㄴㅇㄹ'.includes(c)), `2단계 1판 글자 (${t2.join('')})`);
-for (const k of t2.slice(0, 3)) await press(k);
-check((await text('#progress')) === `3/${t2.length}`, '2단계 진행');
+check(await page.locator('#words').isVisible() && !(await page.locator('#tiles').isVisible()), '2단계는 낱말 화면');
+check(await page.locator('.wq').count() === 8, '한 판에 낱말 8개');
+const w1 = await text('.wq.current');
+for (const k of toKeys(w1)) await press(k);
+check(await page.locator('.wb-space.next').count() === 1, `낱말(${w1})을 다 치면 스페이스 표시`);
+check((await text('#guideJamo')) === '⎵' && await page.locator('.key[data-code="Space"]').evaluate((el) => el.classList.contains('next')), '안내: 스페이스바');
+check(await page.locator('.hands .finger.active[data-finger="T"]').count() === 2, '손 그림: 두 엄지');
+await page.waitForTimeout(400);
+await page.screenshot({ path: `${OUT}/13-words.png` });
+await press(' ');
+check((await text('#progress')) === '1/8' && await page.locator('.wq.done').count() === 1, '스페이스 → 다음 낱말 (1/8)');
+check((await page.inputValue('#ime')) === '', '다음 낱말에서 입력칸 비움');
+const w2 = await text('.wq.current');
+const k2 = toKeys(w2);
+await press(k2[0] === 'ㅎ' ? 'ㅁ' : 'ㅎ');
+check((await text('#playChunsik .cs-bubble')).includes('대신'), '낱말에서 틀리면 안내');
+check(await page.locator('.wb-chars .error').count() === 1, '틀린 글자 빨갛게');
+await press('Backspace');
+for (const k of [...k2, ' ']) await press(k);
+check((await text('#progress')) === '2/8', `두 번째 낱말(${w2}) 끝`);
+check(!(await text('#accuracy')).startsWith('100'), '낱말 판 정확도에 실수 반영');
 await page.keyboard.press('Escape');
 check((await text('#playChunsik .cs-bubble')).includes('Esc'), 'Esc 한 번 → 한 번 더 누르라는 안내');
 check(await page.locator('#playScreen').isVisible(), 'Esc 한 번으로는 안 나감');
@@ -158,11 +177,14 @@ check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지
 await page.goto(`${BASE}/index.html?all`);
 resetIme();
 check(await page.locator('.stage-card.locked').count() === 0, '?all → 모든 단계 열림');
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '5', '모두 열리면 마지막 단계가 골라져 있음');
-await page.keyboard.press('ArrowUp');   // 6단계 → 3단계
-await page.keyboard.press('ArrowDown'); // 3단계 → 6단계
-await page.keyboard.press('ArrowLeft'); // 6단계 → 5단계
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '4', '방향키로 5단계 고르기');
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '8', '모두 열리면 마지막 단계(9단계)가 골라져 있음');
+check(await page.locator('.stage-card').count() === 3, '2쪽에는 3단계');
+await page.keyboard.press('ArrowUp');   // 9단계 → 6단계 (1쪽)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '5', '위 방향키로 앞 쪽으로 넘어감');
+await page.keyboard.press('ArrowDown'); // 6단계 → 9단계
+await page.keyboard.press('ArrowLeft');
+await page.keyboard.press('ArrowLeft'); // 9단계 → 7단계(Shift)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '6', '방향키로 7단계(Shift) 고르기');
 await page.keyboard.press('Enter');
 const t5 = await page.locator('#tiles .tile').allInnerTexts();
 check(t5[0] === 'ㄲ', `5단계 첫 글자 ㄲ (${t5[0]})`);
@@ -181,8 +203,9 @@ check((await text('#progress')) === `4/${t5.length}`, '5단계 Shift 글자 진�
 await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
 await commit(); resetIme(); // 같은 페이지: 실제 입력기처럼 조합 중 글자를 확정한 뒤 흉내 상태를 비운다
 await page.keyboard.press('ArrowRight');
+await page.keyboard.press('ArrowRight');
 await page.keyboard.press('Enter');
-check((await text('#roundLabel')).startsWith('6단계'), '6단계 시작');
+check((await text('#roundLabel')).startsWith('9단계'), '9단계(숫자) 시작');
 const t6 = await page.locator('#tiles .tile').allInnerTexts();
 check(t6.slice(0, 10).join('') === '1234554321', `6단계 첫 판 숫자 (${t6.slice(0, 10).join('')})`);
 check((await text('#guideKey')) === '1 자리', '안내 카드: 1 자리');

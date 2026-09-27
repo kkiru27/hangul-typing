@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
 import { gogumaFor, saveStageResult, isUnlocked, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, buildKeysRound, hasRiskyPair, stageChars } from '../js/lessons.js';
+import { STAGES, buildKeysRound, hasRiskyPair, stageChars, stageTitle, shuffleWords, wordsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, ROWS } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
@@ -132,9 +132,10 @@ test('모든 단계 데이터: 판 길이, 쓰는 글자, 합쳐질 수 있는 �
   for (const stage of STAGES) {
     assert.ok(!ids.has(stage.id), `id 중복 ${stage.id}`);
     ids.add(stage.id);
-    assert.ok(stage.title && stage.short && stage.tip && stage.rounds.length, stage.id);
-    for (const k of stage.keys) assert.ok(stageChars(stage).includes(k), `${stage.id}: ${k}를 연습하지 않음`);
+    assert.ok(stage.name && stage.group && stage.tip && stage.rounds.length, stage.id);
     for (const ch of stageChars(stage)) assert.ok(keyFor(ch), `${stage.id}: ${ch} 키 없음`);
+    if (stage.type !== 'keys') continue;
+    for (const k of stage.keys) assert.ok(stageChars(stage).includes(k), `${stage.id}: ${k}를 연습하지 않음`);
     for (const round of stage.rounds) {
       const allowed = new Set([...(round.intro + round.pool).replace(/\s/g, '')]);
       assert.ok(!hasRiskyPair([...round.intro.replace(/\s/g, '')]), `${stage.id} intro: ${round.intro}`);
@@ -148,6 +149,57 @@ test('모든 단계 데이터: 판 길이, 쓰는 글자, 합쳐질 수 있는 �
       }
     }
   }
+});
+
+test('단계 순서와 제목', () => {
+  assert.equal(stageTitle(0), '1단계 · 기본자리');
+  assert.equal(STAGES[1].type, 'words');
+  assert.equal(stageTitle(1), '2단계 · 기본자리 낱말');
+});
+
+test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () => {
+  const learned = new Set([' ']);
+  for (const stage of STAGES) {
+    if (stage.type === 'keys') {
+      for (const ch of stageChars(stage)) learned.add(ch);
+      continue;
+    }
+    const words = Object.keys(stage.words);
+    assert.ok(words.length >= 20, `${stage.id}: 낱말이 너무 적음`);
+    for (const w of words) {
+      const bad = toKeys(w).filter((k) => !learned.has(k));
+      assert.deepEqual(bad, [], `${stage.id}: '${w}'에 아직 안 배운 키 ${bad.join(' ')}`);
+    }
+    for (const r of stage.rounds) {
+      assert.ok(r.count > 0);
+      assert.match(r.hello, /^.+ \(.+\)$/, `${stage.id}: 춘식이 말투`);
+    }
+  }
+});
+
+test('낱말 판 만들기: 섞은 순서를 판마다 이어서, 모자라면 처음부터', () => {
+  const stage = STAGES.find((s) => s.type === 'words');
+  const order = shuffleWords(stage);
+  assert.equal(new Set(order).size, Object.keys(stage.words).length);
+  const r0 = wordsForRound(order, stage, 0);
+  const r1 = wordsForRound(order, stage, 1);
+  assert.equal(r0.length, stage.rounds[0].count);
+  assert.deepEqual(r1[0], order[stage.rounds[0].count]);
+  assert.equal(new Set([...r0, ...r1]).size, r0.length + r1.length); // 앞 두 판은 겹치지 않음
+  const all = stage.rounds.flatMap((_, i) => wordsForRound(order, stage, i));
+  assert.ok(all.every(Boolean));
+});
+
+test('낱말 + 스페이스를 입력기 흉내로 판정 (스페이스가 조합을 끝냄)', () => {
+  for (const w of ['할머니 ', '호랑이 ', '병아리 ', '춘식이 ', '떡 ']) {
+    const { judge, log } = run(w, toKeys(w));
+    assert.ok(log.every((k) => k === 'ok'), `${w}: ${log.join(',')}`);
+    assert.equal(judge.done, true);
+  }
+  // 스페이스를 안 치고 다음 글자를 치면 틀림
+  const { judge, log } = run('하마 ', [...toKeys('하마'), 'ㅇ']);
+  assert.equal(log.at(-1), 'miss');
+  assert.equal(judge.missByKey[' '], 1);
 });
 
 test('Shift 글자·숫자·문장부호도 입력기 흉내로 판정', () => {
@@ -178,6 +230,11 @@ test('고구마와 단계 열림', () => {
   assert.equal(rec[STAGES[0].id].goguma, 2);
   assert.equal(rec[STAGES[0].id].plays, 3);
   assert.equal(totalGoguma(STAGES, rec), 2);
+  // 순서가 바뀌어 앞 단계를 안 깼어도, 이미 깬 단계는 열려 있음
+  const moved = { [STAGES[2].id]: { goguma: 1 } };
+  assert.equal(isUnlocked(STAGES, moved, 2), true);
+  assert.equal(isUnlocked(STAGES, moved, 3), true);
+  assert.equal(isUnlocked(STAGES, moved, 1), false);
 });
 
 test('F65 배열: 줄마다 16칸, 67키, 자모마다 키가 있음', () => {

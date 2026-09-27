@@ -41,8 +41,10 @@ export function saveStageResult(records, stageId, acc) {
 }
 
 // 1단계는 늘 열려 있고, 나머지는 앞 단계에서 고구마를 1개라도 받으면 열린다.
+// 이미 고구마를 받은 단계도 열려 있다 (단계 순서를 바꿔도 깬 단계가 다시 잠기지 않게).
 export function isUnlocked(stages, records, i, all = false) {
-  return all || i === 0 || (records[stages[i - 1]?.id]?.goguma ?? 0) > 0;
+  const cleared = (id) => (records[id]?.goguma ?? 0) > 0;
+  return all || i === 0 || cleared(stages[i - 1]?.id) || cleared(stages[i]?.id);
 }
 
 export function totalGoguma(stages, records) {

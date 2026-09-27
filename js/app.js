@@ -1,16 +1,17 @@
-// 한글 타자 연습 앱: 단계 지도 → 자리 연습(판 3개) → 결과(고구마) → 단계 지도
+// 한글 타자 연습 앱: 단계 지도 → 연습(판 3개) → 결과(고구마) → 단계 지도
+// 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 ").
 
-import { Judge } from './judge.js?v=202609270844';
-import { InputBridge } from './input-bridge.js?v=202609270844';
-import { KeyboardView } from './keyboard-view.js?v=202609270844';
-import { HandsView } from './hands-view.js?v=202609270844';
-import { STAGES, buildKeysRound, stageChars } from './lessons.js?v=202609270844';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, WASD, ARROWS } from './layout.js?v=202609270844';
-import { isHangul, charName, josa, toUnits } from './hangul.js?v=202609270844';
-import { loadRecords, saveStageResult, isUnlocked, totalGoguma, GOGUMA_MAX } from './records.js?v=202609270844';
-import { VERSION } from './version.js?v=202609270844';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609270844';
-import { checkForUpdate } from './update-check.js?v=202609270844';
+import { Judge } from './judge.js?v=202609270855';
+import { InputBridge } from './input-bridge.js?v=202609270855';
+import { KeyboardView } from './keyboard-view.js?v=202609270855';
+import { HandsView } from './hands-view.js?v=202609270855';
+import { STAGES, buildKeysRound, stageChars, stageNum, stageTitle, stagePreview, shuffleWords, wordsForRound } from './lessons.js?v=202609270855';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, WASD, ARROWS } from './layout.js?v=202609270855';
+import { isHangul, charName, josa, toUnits } from './hangul.js?v=202609270855';
+import { loadRecords, saveStageResult, isUnlocked, totalGoguma, GOGUMA_MAX } from './records.js?v=202609270855';
+import { VERSION } from './version.js?v=202609270855';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609270855';
+import { checkForUpdate } from './update-check.js?v=202609270855';
 
 const $ = (id) => document.getElementById(id);
 
@@ -33,6 +34,7 @@ const IDLE_MS = 7000;
 const ESC_MS = 2000; // Esc 두 번 사이 시간
 const NAV_KEYS = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
 const MAP_COLS = 3;
+const MAP_PAGE = 6; // 단계 지도 한 쪽에 보이는 단계 수
 
 const state = {
   screen: 'home',      // home | play | roundDone | stageDone
@@ -41,7 +43,11 @@ const state = {
   stageIdx: 0,
   stage: STAGES[0],
   roundIdx: 0,
-  judge: null,
+  items: [],           // 이번 판 목표 글들
+  itemIdx: 0,
+  judge: null,         // 지금 목표 글의 판정기
+  roundAcc: null,      // 이번 판에서 끝낸 목표 글들의 합계 {correct, mistakes, missByKey}
+  wordOrder: [],       // 낱말 단계: 섞은 낱말 순서
   results: [],
   warn: null,          // english | fnw | focus | null
   streak: 0,           // 연속으로 맞힌 키 (춘식이 칭찬용)
@@ -89,26 +95,31 @@ function gogumaIcons(n, cls = '') {
 function renderMap() {
   const total = totalGoguma(STAGES, state.records);
   $('mapTotal').innerHTML = `${GOGUMA_SVG} 모은 고구마 ${total} / ${STAGES.length * GOGUMA_MAX}`;
+  const page = Math.floor(state.sel / MAP_PAGE);
+  const pages = Math.ceil(STAGES.length / MAP_PAGE);
   $('stageMap').innerHTML = STAGES.map((s, i) => {
+    if (Math.floor(i / MAP_PAGE) !== page) return '';
     const rec = state.records[s.id];
     const open = unlocked(i);
     const cls = ['stage-card', open ? '' : 'locked', i === state.sel ? 'selected' : ''].join(' ');
     return `<div class="${cls}" data-idx="${i}">
-      <span class="sc-num">${s.title.split(' · ')[0]}</span>
-      <span class="sc-name">${s.short}</span>
-      <span class="sc-keys">${s.keys.join(' ')}</span>
+      <span class="sc-num">${stageNum(i)}</span>
+      <span class="sc-name">${s.name}</span>
+      <span class="sc-keys">${stagePreview(s)}</span>
       <span class="sc-goguma">${gogumaIcons(rec?.goguma ?? 0)}</span>
+      <span class="sc-group ${s.type}">${s.group}</span>
       ${open ? '' : '<span class="sc-lock">🔒</span>'}
     </div>`;
   }).join('');
+  $('mapPages').innerHTML = pages > 1 ? Array.from({ length: pages }, (_, p) => `<span class="${p === page ? 'on' : ''}"></span>`).join('') : '';
   const s = STAGES[state.sel];
   $('mapTip').textContent = unlocked(state.sel) ? s.tip : '';
 
   const rec = state.records[s.id];
   if (!unlocked(state.sel)) homeCs.say('춘... (앞 단계에서 고구마를 받으면 열려!)');
   else if (!Object.keys(state.records).length) homeCs.say('츈츈! 춘춘춘~ (안녕! 나랑 타자 연습하자)');
-  else if ((rec?.goguma ?? 0) >= GOGUMA_MAX) homeCs.say(`춘춘! (${s.short}${josa(s.short, '은', '는')} 고구마 다 모았어!)`);
-  else homeCs.say(`춘춘? (${s.short} 해 볼까?)`);
+  else if ((rec?.goguma ?? 0) >= GOGUMA_MAX) homeCs.say(`춘춘! (${s.name}${josa(s.name, '은', '는')} 고구마 다 모았어!)`);
+  else homeCs.say(`춘춘? (${s.name} 해 볼까?)`);
 }
 
 function moveSel(delta) {
@@ -122,7 +133,7 @@ function tryStart(i) {
   if (unlocked(i)) return startStage(i);
   state.sel = i;
   renderMap();
-  const card = $('stageMap').children[i];
+  const card = $('stageMap').querySelector(`[data-idx="${i}"]`);
   card.classList.remove('shake');
   void card.offsetWidth;
   card.classList.add('shake');
@@ -141,6 +152,7 @@ function startStage(i) {
   state.stage = STAGES[i];
   state.roundIdx = 0;
   state.results = [];
+  state.wordOrder = state.stage.type === 'words' ? shuffleWords(state.stage) : [];
   bridge.focus();
   startRound();
 }
@@ -148,20 +160,25 @@ function startStage(i) {
 function startRound() {
   const { stage, roundIdx } = state;
   const round = stage.rounds[roundIdx];
-  const items = buildKeysRound(round);
-  state.judge = new Judge(items.join(''));
+  const isWords = stage.type === 'words';
+  state.items = isWords
+    ? wordsForRound(state.wordOrder, stage, roundIdx).map((w) => `${w} `) // 낱말 뒤 스페이스까지 쳐야 다음 낱말
+    : [buildKeysRound(round).join('')];
+  state.itemIdx = 0;
+  state.roundAcc = { correct: 0, mistakes: 0, missByKey: {} };
   state.streak = 0;
   state.escAt = 0;
-  bridge.rebase();
-  state.input = { raw: '', base: 0, composing: false };
+  startItem();
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609270844';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609270855';
 
-  $('stageLabel').textContent = stage.title;
-  $('roundLabel').textContent = `${stage.title.split(' · ')[0]} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
-  $('tiles').innerHTML = tileRows(state.judge.units.length)
+  $('stageLabel').textContent = stageTitle(state.stageIdx);
+  $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
+  $('tiles').hidden = isWords;
+  $('words').hidden = !isWords;
+  $('tiles').innerHTML = isWords ? '' : tileRows(state.judge.units.length)
     .map(([a, b]) => `<div class="tile-row">${state.judge.units.slice(a, b).map((u) => `<div class="tile">${escapeHtml(u.ch)}</div>`).join('')}</div>`)
     .join('');
   const focus = new Set(['Backspace', 'CapsLock']);
@@ -173,9 +190,33 @@ function startRound() {
   resetIdle();
 }
 
+// 목표 글 하나 시작 (낱말 연습은 낱말마다 새 판정기, 입력칸도 비운다)
+function startItem() {
+  state.judge = new Judge(state.items[state.itemIdx]);
+  bridge.rebase();
+  state.input = { raw: '', base: 0, composing: false };
+}
+
+// 목표 글 하나 끝: 합계에 더하고 다음 글로, 마지막이면 판 끝
+function finishItem() {
+  const r = state.judge.result();
+  const acc = state.roundAcc;
+  acc.correct += r.correct;
+  acc.mistakes += r.mistakes;
+  for (const [k, n] of Object.entries(r.missByKey)) acc.missByKey[k] = (acc.missByKey[k] || 0) + n;
+  if (state.itemIdx < state.items.length - 1) {
+    state.itemIdx++;
+    startItem();
+    render();
+  } else {
+    finishRound();
+  }
+}
+
 function finishRound() {
-  const { judge, stage } = state;
-  state.results.push({ round: stage.rounds[state.roundIdx].title, ...judge.result() });
+  const { stage, roundAcc } = state;
+  const total = roundAcc.correct + roundAcc.mistakes;
+  state.results.push({ round: stage.rounds[state.roundIdx].title, ...roundAcc, accuracy: total ? roundAcc.correct / total : null });
   const last = state.roundIdx === stage.rounds.length - 1;
   state.screen = last ? 'stageDone' : 'roundDone'; // 입력은 바로 막고, 화면은 잠깐 뒤에
   keyboard.setNext([]);
@@ -185,7 +226,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609270844';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609270855';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -225,12 +266,12 @@ function showStageResult() {
   const next = STAGES[state.stageIdx + 1];
 
   show('stageDone');
-  $('resultTitle').textContent = `${state.stage.title} 끝! ${cheer(acc)}`;
+  $('resultTitle').textContent = `${stageTitle(state.stageIdx)} 끝! ${cheer(acc)}`;
   $('resultAcc').textContent = pct(acc);
   $('resultGoguma').hidden = false;
   $('resultGoguma').innerHTML = gogumaIcons(saved.goguma);
   const notes = [];
-  if (saved.firstClear && next) notes.push(`🔓 ${next.title.split(' · ')[0]}가 열렸어요!`);
+  if (saved.firstClear && next) notes.push(`🔓 ${stageNum(state.stageIdx + 1)}가 열렸어요!`);
   if (saved.newBest) notes.push('🎉 새 기록!');
   if (!saved.goguma) notes.push('정확도 70%를 넘으면 고구마를 받아요');
   $('resultNote').hidden = !notes.length;
@@ -238,7 +279,7 @@ function showStageResult() {
   $('resultRounds').innerHTML = rs.map((r) => `${escapeHtml(r.round)} <b>${pct(r.accuracy)}</b>`).join(' · ');
   $('resultMiss').innerHTML = missText(miss);
   $('resultNext').textContent = '단계 고르기';
-  resultChunsik(acc, `${state.stage.title.split(' · ')[0]} 끝!`);
+  resultChunsik(acc, `${stageNum(state.stageIdx)} 끝!`);
   $('accuracy').textContent = pct(acc);
   keyboard.setNext(['Enter']);
   // 다음 단계가 열렸으면 단계 지도에서 그 단계를 골라 둔다
@@ -280,7 +321,7 @@ function onChange({ raw, base, keys, composing }) {
     playCs.say('춘! (좋아, 다시!)');
   }
   render();
-  if (judge.done) finishRound();
+  if (judge.done) finishItem();
 }
 
 // 틀렸을 때 무엇을 쳤는지 말로 (Shift를 빼먹은 경우는 따로 알려 준다)
@@ -382,9 +423,11 @@ function render() {
   const { judge } = state;
   if (!judge) return;
 
-  // 글자 타일
-  const tiles = $('tiles').querySelectorAll('.tile');
-  judge.units.forEach((u, i) => {
+  const isWords = state.stage.type === 'words';
+  if (isWords) renderWords();
+  // 글자 타일 (자리 연습)
+  const tiles = isWords ? [] : $('tiles').querySelectorAll('.tile');
+  if (!isWords) judge.units.forEach((u, i) => {
     const t = tiles[i];
     const cur = i === currentUnit(judge);
     t.className = 'tile';
@@ -396,9 +439,13 @@ function render() {
   });
 
   renderTyped();
-  $('progress').textContent = `${judge.okLen}/${judge.target.length}`;
-  $('track').style.setProperty('--p', judge.okLen / judge.target.length);
-  $('accuracy').textContent = pct(judge.accuracy);
+  const n = state.items.length;
+  const part = judge.okLen / judge.target.length; // 지금 글을 친 비율
+  $('progress').textContent = isWords ? `${state.itemIdx + (judge.done ? 1 : 0)}/${n}` : `${judge.okLen}/${judge.target.length}`;
+  $('track').style.setProperty('--p', (state.itemIdx + part) / n);
+  const c = state.roundAcc.correct + judge.correct;
+  const m = state.roundAcc.mistakes + judge.mistakes;
+  $('accuracy').textContent = pct(c + m ? c / (c + m) : null);
 
   // 다음에 칠 키 / 손가락 안내
   //   경고 중이면 고치는 키(Caps Lock, Fn+W)를, 틀렸으면 Backspace를, 아니면 목표 키를 가리킨다
@@ -416,6 +463,9 @@ function render() {
   } else if (judge.done) {
     codes = [];
     guide = { big: '✓', small: '끝!', finger: null };
+  } else if (judge.nextKey === ' ') {
+    codes = ['Space'];
+    guide = { big: '⎵', small: '스페이스바', finger: 'T', fingerText: '엄지로 다음 낱말!' };
   } else {
     const key = keyFor(judge.nextKey);
     codes = codesFor(judge.nextKey);
@@ -433,6 +483,20 @@ function render() {
   $('guideJamo').textContent = guide.big;
   $('guideKey').textContent = guide.small;
   $('guideFinger').textContent = guide.fingerText || FINGER_NAMES[guide.finger] || '';
+}
+
+// 낱말 연습 화면: 이번 판 낱말 줄 + 지금 낱말(글자마다 색, 다 치면 스페이스 표시)
+function renderWords() {
+  const { judge, items, itemIdx } = state;
+  $('wordQueue').innerHTML = items.map((w, i) =>
+    `<span class="wq ${i < itemIdx ? 'done' : i === itemIdx ? 'current' : ''}">${escapeHtml(w.trim())}</span>`).join('');
+  const word = items[itemIdx].trim();
+  const states = judge.unitStates();
+  const chars = judge.units.slice(0, -1).map((u, i) => `<span class="${states[i]}">${escapeHtml(u.ch)}</span>`).join('');
+  const spaceState = states[states.length - 1];
+  const spaceCls = spaceState === 'done' ? 'done' : judge.nextKey === ' ' && !judge.hasError ? 'next' : '';
+  $('wordBig').innerHTML = `<span class="wb-emoji">${state.stage.words[word] || ''}</span>
+    <span class="wb-chars">${chars}</span><span class="wb-space ${spaceCls}">스페이스 ⎵</span>`;
 }
 
 // 친 글자 막대: 이번 판에 친 글자를 입력기가 보여 주는 그대로 (ㅁ+ㅏ → 마).
