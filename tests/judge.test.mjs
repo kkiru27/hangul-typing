@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { toKeys, toUnits, objParticle } from '../js/hangul.js';
+import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
+import { gogumaFor, saveStageResult, isUnlocked, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, buildKeysRound, hasRiskyPair } from '../js/lessons.js';
+import { STAGES, buildKeysRound, hasRiskyPair, stageChars } from '../js/lessons.js';
 import { keyFor, codesFor, ROWS } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
@@ -25,6 +26,13 @@ test('글자 단위 구간', () => {
 test('조사', () => {
   assert.equal(objParticle('ㄴ'), '을');
   assert.equal(objParticle('ㅏ'), '를');
+  assert.equal(objParticle('ㄲ'), '을');   // 쌍기역을
+  assert.equal(josa('ㅒ', '은', '는'), '는'); // 얘는
+  assert.equal(objParticle('1'), '을');   // 일을
+  assert.equal(objParticle('2'), '를');   // 이를
+  assert.equal(`${charName('?')}${objParticle('?')}`, '물음표를');
+  assert.equal(josa('기본자리', '은', '는'), '는');
+  assert.equal(josa('왼손 윗줄', '은', '는'), '은');
 });
 
 // 입력기 흉내로 치는 동안 매 순간 입력칸 값을 판정기에 넣는다
@@ -119,16 +127,57 @@ test('글자별 상태', () => {
   assert.deepEqual(judge.unitStates(), ['done', 'error']);
 });
 
-test('1단계 데이터: 기본자리 자모만, 합쳐질 수 있는 모음 짝 없음', () => {
-  const stage = STAGES[0];
-  for (const round of stage.rounds) {
-    for (let t = 0; t < 200; t++) {
-      const items = buildKeysRound(round);
-      assert.equal(items.length, round.length);
-      assert.ok(items.every((j) => stage.keys.includes(j)), items.join(''));
-      assert.ok(!hasRiskyPair(items), items.join(''));
+test('모든 단계 데이터: 판 길이, 쓰는 글자, 합쳐질 수 있는 짝 없음, 키 있음', () => {
+  const ids = new Set();
+  for (const stage of STAGES) {
+    assert.ok(!ids.has(stage.id), `id 중복 ${stage.id}`);
+    ids.add(stage.id);
+    assert.ok(stage.title && stage.short && stage.tip && stage.rounds.length, stage.id);
+    for (const k of stage.keys) assert.ok(stageChars(stage).includes(k), `${stage.id}: ${k}를 연습하지 않음`);
+    for (const ch of stageChars(stage)) assert.ok(keyFor(ch), `${stage.id}: ${ch} 키 없음`);
+    for (const round of stage.rounds) {
+      const allowed = new Set([...(round.intro + round.pool).replace(/\s/g, '')]);
+      assert.ok(!hasRiskyPair([...round.intro.replace(/\s/g, '')]), `${stage.id} intro: ${round.intro}`);
+      assert.ok(round.intro.replace(/\s/g, '').length <= round.length, `${stage.id}: intro가 판보다 김`);
+      assert.match(round.hello, /^.+ \(.+\)$/, `${stage.id}: 춘식이 말투 (해석) 형식`);
+      for (let t = 0; t < 200; t++) {
+        const items = buildKeysRound(round);
+        assert.equal(items.length, round.length);
+        assert.ok(items.every((j) => allowed.has(j)), items.join(''));
+        assert.ok(!hasRiskyPair(items), `${stage.id}: ${items.join('')}`);
+      }
     }
   }
+});
+
+test('Shift 글자·숫자·문장부호도 입력기 흉내로 판정', () => {
+  const target = 'ㄲㄱㄲㅒㅐ12!?.,';
+  const { judge, log } = run(target, [...target]);
+  assert.ok(log.every((k) => k === 'ok'), log.join(','));
+  assert.equal(judge.done, true);
+});
+
+test('고구마와 단계 열림', () => {
+  assert.equal(gogumaFor(null), 0);
+  assert.equal(gogumaFor(0.69), 0);
+  assert.equal(gogumaFor(0.7), 1);
+  assert.equal(gogumaFor(0.85), 2);
+  assert.equal(gogumaFor(0.95), 3);
+  const rec = {};
+  assert.equal(isUnlocked(STAGES, rec, 0), true);
+  assert.equal(isUnlocked(STAGES, rec, 1), false);
+  assert.equal(isUnlocked(STAGES, rec, 1, true), true);
+  let r = saveStageResult(rec, STAGES[0].id, 0.6); // 저장소가 없어도(노드) 동작해야 함
+  assert.deepEqual([r.goguma, r.firstClear, r.newBest], [0, false, false]);
+  assert.equal(isUnlocked(STAGES, rec, 1), false);
+  r = saveStageResult(rec, STAGES[0].id, 0.9);
+  assert.deepEqual([r.goguma, r.firstClear, r.newBest], [2, true, true]);
+  assert.equal(isUnlocked(STAGES, rec, 1), true);
+  r = saveStageResult(rec, STAGES[0].id, 0.8); // 더 낮은 기록은 고구마를 줄이지 않음
+  assert.deepEqual([r.goguma, r.firstClear, r.newBest], [1, false, false]);
+  assert.equal(rec[STAGES[0].id].goguma, 2);
+  assert.equal(rec[STAGES[0].id].plays, 3);
+  assert.equal(totalGoguma(STAGES, rec), 2);
 });
 
 test('F65 배열: 줄마다 16칸, 67키, 자모마다 키가 있음', () => {

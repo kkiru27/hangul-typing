@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>한글 타자 연습</title>
-<link rel="stylesheet" href="css/common.css?v=202609270830">
-<link rel="stylesheet" href="css/app.css?v=202609270830">
-<link rel="stylesheet" href="css/chunsik.css?v=202609270830">
-<link rel="preload" as="image" href="img/chunsik.png?v=202609270830">
-<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270830">
-<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270830">
+<link rel="stylesheet" href="css/common.css?v=202609270844">
+<link rel="stylesheet" href="css/app.css?v=202609270844">
+<link rel="stylesheet" href="css/chunsik.css?v=202609270844">
+<link rel="preload" as="image" href="img/chunsik.png?v=202609270844">
+<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270844">
+<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270844">
 </head>
 <body>
 <!-- 키보드 입력을 받는 숨은 입력칸 (한글 조합은 여기서 일어난다) -->
@@ -25,7 +25,7 @@
         <div class="round-label" id="roundLabel"></div>
         <div class="track" id="track">
           <div class="track-line"><div class="track-fill" id="trackFill"></div></div>
-          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270830" alt="" draggable="false"></div>
+          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270844" alt="" draggable="false"></div>
           <div class="track-goal" id="trackGoal"></div>
         </div>
       </div>
@@ -39,17 +39,16 @@
   <main class="stage-area">
     <!-- 처음 화면 -->
     <section id="homeScreen" class="screen home">
-      <h1>한글 타자 연습</h1>
       <div class="home-row">
         <div id="homeChunsik"></div>
-        <div class="home-card">
-          <div class="home-card-title" id="homeStageTitle"></div>
-          <div class="home-keys" id="homeKeys"></div>
-          <p class="home-tip" id="homeTip"></p>
+        <div class="map-wrap">
+          <div class="map-total" id="mapTotal"></div>
+          <!-- 단계 지도: 방향키로 고르고 Enter로 시작 (카드를 눌러도 시작) -->
+          <div class="stage-map" id="stageMap"></div>
+          <p class="map-tip" id="mapTip"></p>
         </div>
       </div>
-      <p class="checklist">한글이 안 나오면 <b>Caps Lock</b>을 한 번 눌러요</p>
-      <p class="press-enter"><kbd>Enter ⏎</kbd> 를 누르면 시작해요</p>
+      <p class="press-enter"><kbd>← → ↑ ↓</kbd> 로 고르고 <kbd>Enter ⏎</kbd> 로 시작해요</p>
       <div class="corner"><a href="test.html">입력 테스트 페이지</a> · <span id="version"></span></div>
     </section>
 
@@ -86,6 +85,8 @@
       <div class="result-card">
         <div class="result-title" id="resultTitle"></div>
         <div class="result-acc"><span>정확도</span><b id="resultAcc"></b></div>
+        <div class="result-goguma" id="resultGoguma" hidden></div>
+        <div class="result-note" id="resultNote" hidden></div>
         <div class="result-rounds" id="resultRounds"></div>
         <div class="result-miss" id="resultMiss"></div>
         <p class="press-enter"><kbd>Enter ⏎</kbd> <span id="resultNext"></span></p>
@@ -101,6 +102,6 @@
 
 <div class="rotate-hint">아이패드를 <b>가로</b>로 돌려 주세요</div>
 
-<script type="module" src="js/app.js?v=202609270830"></script>
+<script type="module" src="js/app.js?v=202609270844"></script>
 </body>
 </html>

@@ -61,22 +61,34 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 @keyframes drop { from { transform: translateY(-10px); opacity: 0; } }
 
 /* 처음 화면 */
-.home h1 { margin: 0 0 14px; font-size: 38px; letter-spacing: -.5px; }
-.home-card {
-  background: var(--card); border: 2px solid var(--line); border-radius: 22px;
-  padding: 16px 28px; text-align: center; min-width: 420px;
+/* 단계 지도 */
+.map-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.map-total { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 800; color: var(--muted); }
+.map-total .goguma { width: 30px; }
+.stage-map { display: grid; grid-template-columns: repeat(3, 184px); gap: 10px; }
+.stage-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 12px 8px;
+  background: var(--card);
+  border: 2.5px solid var(--line);
+  border-radius: 18px;
+  cursor: pointer;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
 }
-.home-card-title { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
-.home-keys { display: flex; gap: 8px; justify-content: center; }
-.home-keys span {
-  width: 44px; height: 44px; border-radius: 10px;
-  display: grid; place-items: center;
-  font-size: 24px; font-weight: 700;
-  background: var(--c-soft); border-bottom: 4px solid var(--c);
-}
-.home-keys .gap { width: 18px; background: none; border: 0; }
-.home-tip { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
-.checklist { margin: 12px 0 0; color: var(--muted); font-size: 16px; }
+.stage-card.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 122, 89, .22); transform: translateY(-3px); }
+.stage-card.locked { background: #f4efe8; color: #b3a59b; }
+.stage-card.shake { animation: shake-x .35s; }
+@keyframes shake-x { 25% { translate: -5px 0; } 50% { translate: 5px 0; } 75% { translate: -3px 0; } }
+.sc-num { font-size: 13px; font-weight: 800; color: var(--accent); }
+.stage-card.locked .sc-num { color: #b3a59b; }
+.sc-name { font-size: 19px; font-weight: 800; }
+.sc-keys { font-size: 15px; color: var(--muted); letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-goguma { display: flex; gap: 4px; margin-top: 3px; }
+.sc-goguma .goguma { width: 28px; }
+.goguma.off { filter: grayscale(1); opacity: .28; }
+.sc-lock { position: absolute; right: 10px; top: 8px; font-size: 18px; }
+.map-tip { margin: 2px 0 0; min-height: 20px; max-width: 580px; text-align: center; font-size: 15px; color: var(--muted); }
 .press-enter { margin: 14px 0 0; font-size: 22px; font-weight: 700; }
 .press-enter kbd { font-size: 20px; border-color: var(--index); color: var(--index); }
 .corner { position: absolute; right: 18px; bottom: 2px; font-size: 12px; color: #c3b6ab; }
@@ -171,6 +183,14 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .result-rounds { margin-top: 6px; font-size: 16px; color: var(--muted); line-height: 1.7; }
 .result-rounds b { color: var(--ink); }
 .result-miss { margin-top: 6px; font-size: 17px; }
+.result-goguma { display: flex; justify-content: center; gap: 10px; margin-top: 4px; }
+.result-goguma[hidden], .result-note[hidden] { display: none; }
+.result-goguma .goguma { width: 54px; }
+.result-goguma .goguma.earned { animation: goguma-pop .45s ease-out both; }
+.result-goguma .goguma.earned:nth-child(2) { animation-delay: .25s; }
+.result-goguma .goguma.earned:nth-child(3) { animation-delay: .5s; }
+@keyframes goguma-pop { 0% { transform: scale(0) rotate(-30deg); } 70% { transform: scale(1.25) rotate(8deg); } 100% { transform: none; } }
+.result-note { margin-top: 4px; font-size: 18px; font-weight: 800; color: var(--ok); }
 
 /* 아래 키보드 */
 .kbd-area { flex: 0 0 auto; padding: 8px 14px calc(12px + env(safe-area-inset-bottom)); }
@@ -200,5 +220,12 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   .typed-bar { height: 42px; }
   .tb-text { font-size: 24px; }
   .tb-caret { height: 26px; }
-  .home h1 { font-size: 32px; margin-bottom: 8px; }
+  .stage-card { padding: 5px 10px; }
+  .sc-name { font-size: 17px; }
+  .sc-goguma .goguma { width: 22px; }
+  .map-tip { display: none; }
+  .result-card { padding: 14px 32px; }
+  .result-title { font-size: 26px; }
+  .result-acc b { font-size: 44px; }
+  .result-goguma .goguma { width: 42px; }
 }

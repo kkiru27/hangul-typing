@@ -1,15 +1,16 @@
-// 한글 타자 연습 앱 (1차: 자리 연습 1단계)
+// 한글 타자 연습 앱: 단계 지도 → 자리 연습(판 3개) → 결과(고구마) → 단계 지도
 
-import { Judge } from './judge.js?v=202609270830';
-import { InputBridge } from './input-bridge.js?v=202609270830';
-import { KeyboardView } from './keyboard-view.js?v=202609270830';
-import { HandsView } from './hands-view.js?v=202609270830';
-import { STAGES, buildKeysRound } from './lessons.js?v=202609270830';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, fingerTone, WASD, ARROWS, ROWS } from './layout.js?v=202609270830';
-import { isHangul, objParticle, toUnits } from './hangul.js?v=202609270830';
-import { VERSION } from './version.js?v=202609270830';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609270830';
-import { checkForUpdate } from './update-check.js?v=202609270830';
+import { Judge } from './judge.js?v=202609270844';
+import { InputBridge } from './input-bridge.js?v=202609270844';
+import { KeyboardView } from './keyboard-view.js?v=202609270844';
+import { HandsView } from './hands-view.js?v=202609270844';
+import { STAGES, buildKeysRound, stageChars } from './lessons.js?v=202609270844';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, WASD, ARROWS } from './layout.js?v=202609270844';
+import { isHangul, charName, josa, toUnits } from './hangul.js?v=202609270844';
+import { loadRecords, saveStageResult, isUnlocked, totalGoguma, GOGUMA_MAX } from './records.js?v=202609270844';
+import { VERSION } from './version.js?v=202609270844';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609270844';
+import { checkForUpdate } from './update-check.js?v=202609270844';
 
 const $ = (id) => document.getElementById(id);
 
@@ -21,17 +22,23 @@ const playCs = new Chunsik($('playChunsik'));
 const resultCs = new Chunsik($('resultChunsik'), { size: 'l' });
 $('trackGoal').innerHTML = GOGUMA_SVG;
 
+// 주소 끝에 ?all 을 붙이면 모든 단계가 열린다 (확인용)
+const UNLOCK_ALL = new URLSearchParams(location.search).has('all');
+
 // 춘식이 말투: 고양이 말 + (해석)
 const CHEERS = ['춘춘!! (좋아!)', '츈츈춘~! (잘한다!)', '춘! 춘! (척척!)', '춘춘춘!! (최고야!)', '츈~ 춘춘! (멋져!)', '춘?! 춘춘! (우와!)'];
 const SAD = ['츄... 춘...', '춘... 츈츈...', '츈... 춘...'];
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const IDLE_MS = 7000;
-
-const LATIN_BY_CODE = Object.fromEntries(ROWS.flat().filter((k) => k.jamo).map((k) => [k.code, k.label]));
+const ESC_MS = 2000; // Esc 두 번 사이 시간
 const NAV_KEYS = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
+const MAP_COLS = 3;
 
 const state = {
   screen: 'home',      // home | play | roundDone | stageDone
+  records: loadRecords(),
+  sel: 0,              // 단계 지도에서 고른 단계
+  stageIdx: 0,
   stage: STAGES[0],
   roundIdx: 0,
   judge: null,
@@ -40,6 +47,7 @@ const state = {
   streak: 0,           // 연속으로 맞힌 키 (춘식이 칭찬용)
   input: { raw: '', base: 0, composing: false }, // 입력칸 값 (친 글자 막대용)
   idleTimer: 0,
+  escAt: 0,
 };
 
 // ───── 화면 전환 ─────
@@ -55,27 +63,82 @@ function show(screen) {
   if (screen !== 'play') setWarn(null);
 }
 
-function goHome() {
+// ───── 단계 지도 ─────
+
+function goHome(sel = state.sel) {
+  clearTimeout(state.idleTimer);
+  state.sel = sel;
   show('home');
-  const { stage } = state;
   $('stageLabel').textContent = '';
   $('progress').textContent = '–';
   $('accuracy').textContent = '–';
-  $('homeStageTitle').textContent = stage.title;
-  $('homeTip').textContent = stage.tip;
-  $('homeKeys').innerHTML = stage.keys
-    .map((j, i) => {
-      const code = keyFor(j).code;
-      const gap = i > 0 && FINGER_BY_CODE[code][0] !== FINGER_BY_CODE[keyFor(stage.keys[i - 1]).code][0];
-      return `${gap ? '<span class="gap"></span>' : ''}<span class="tone-${fingerTone(FINGER_BY_CODE[code])}">${j}</span>`;
-    })
-    .join('');
   keyboard.setFocusSet(null);
   keyboard.setNext(['Enter']);
-  homeCs.say('츈츈! 춘춘춘~ (안녕! 나랑 타자 연습하자)');
+  renderMap();
 }
 
-function startStage() {
+function unlocked(i) {
+  return isUnlocked(STAGES, state.records, i, UNLOCK_ALL);
+}
+
+function gogumaIcons(n, cls = '') {
+  return Array.from({ length: GOGUMA_MAX }, (_, i) =>
+    GOGUMA_SVG.replace('class="goguma"', `class="goguma ${i < n ? 'earned' : 'off'} ${cls}"`)).join('');
+}
+
+function renderMap() {
+  const total = totalGoguma(STAGES, state.records);
+  $('mapTotal').innerHTML = `${GOGUMA_SVG} 모은 고구마 ${total} / ${STAGES.length * GOGUMA_MAX}`;
+  $('stageMap').innerHTML = STAGES.map((s, i) => {
+    const rec = state.records[s.id];
+    const open = unlocked(i);
+    const cls = ['stage-card', open ? '' : 'locked', i === state.sel ? 'selected' : ''].join(' ');
+    return `<div class="${cls}" data-idx="${i}">
+      <span class="sc-num">${s.title.split(' · ')[0]}</span>
+      <span class="sc-name">${s.short}</span>
+      <span class="sc-keys">${s.keys.join(' ')}</span>
+      <span class="sc-goguma">${gogumaIcons(rec?.goguma ?? 0)}</span>
+      ${open ? '' : '<span class="sc-lock">🔒</span>'}
+    </div>`;
+  }).join('');
+  const s = STAGES[state.sel];
+  $('mapTip').textContent = unlocked(state.sel) ? s.tip : '';
+
+  const rec = state.records[s.id];
+  if (!unlocked(state.sel)) homeCs.say('춘... (앞 단계에서 고구마를 받으면 열려!)');
+  else if (!Object.keys(state.records).length) homeCs.say('츈츈! 춘춘춘~ (안녕! 나랑 타자 연습하자)');
+  else if ((rec?.goguma ?? 0) >= GOGUMA_MAX) homeCs.say(`춘춘! (${s.short}${josa(s.short, '은', '는')} 고구마 다 모았어!)`);
+  else homeCs.say(`춘춘? (${s.short} 해 볼까?)`);
+}
+
+function moveSel(delta) {
+  const next = state.sel + delta;
+  if (next < 0 || next >= STAGES.length) return;
+  state.sel = next;
+  renderMap();
+}
+
+function tryStart(i) {
+  if (unlocked(i)) return startStage(i);
+  state.sel = i;
+  renderMap();
+  const card = $('stageMap').children[i];
+  card.classList.remove('shake');
+  void card.offsetWidth;
+  card.classList.add('shake');
+}
+
+$('stageMap').addEventListener('click', (e) => {
+  const card = e.target.closest('.stage-card');
+  if (card && state.screen === 'home') tryStart(Number(card.dataset.idx));
+});
+
+// ───── 연습 ─────
+
+function startStage(i) {
+  state.stageIdx = i;
+  state.sel = i;
+  state.stage = STAGES[i];
   state.roundIdx = 0;
   state.results = [];
   bridge.focus();
@@ -88,19 +151,22 @@ function startRound() {
   const items = buildKeysRound(round);
   state.judge = new Judge(items.join(''));
   state.streak = 0;
+  state.escAt = 0;
   bridge.rebase();
   state.input = { raw: '', base: 0, composing: false };
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609270830';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609270844';
 
   $('stageLabel').textContent = stage.title;
   $('roundLabel').textContent = `${stage.title.split(' · ')[0]} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
   $('tiles').innerHTML = tileRows(state.judge.units.length)
-    .map(([a, b]) => `<div class="tile-row">${state.judge.units.slice(a, b).map((u) => `<div class="tile">${u.ch}</div>`).join('')}</div>`)
+    .map(([a, b]) => `<div class="tile-row">${state.judge.units.slice(a, b).map((u) => `<div class="tile">${escapeHtml(u.ch)}</div>`).join('')}</div>`)
     .join('');
-  keyboard.setFocusSet(stage.keys.map((j) => keyFor(j).code).concat(['Backspace', 'CapsLock']));
+  const focus = new Set(['Backspace', 'CapsLock']);
+  for (const ch of stageChars(stage)) for (const code of codesFor(ch)) focus.add(code);
+  keyboard.setFocusSet([...focus]);
   show('play');
   render();
   checkFocusSoon();
@@ -119,7 +185,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609270830';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609270844';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -130,6 +196,7 @@ function resultChunsik(acc, doneText) {
   resultCs.mood(good ? 'party' : null);
   if (acc >= 0.95) resultCs.say(`춘춘춘~!! (${doneText} 고구마 냠냠!)`, 'good');
   else if (good) resultCs.say('츈츈! (맛있다! 잘했어!)', 'good');
+  else if (acc >= 0.7) resultCs.say('춘! 춘춘! (고구마 하나 받았어!)', 'good');
   else resultCs.say('춘... 춘춘! (괜찮아, 한 번 더 해 보자!)');
 }
 
@@ -138,6 +205,8 @@ function showRoundResult() {
   show('roundDone');
   $('resultTitle').textContent = `${r.round} 끝! ${cheer(r.accuracy)}`;
   $('resultAcc').textContent = pct(r.accuracy);
+  $('resultGoguma').hidden = true;
+  $('resultNote').hidden = true;
   $('resultRounds').innerHTML = '';
   $('resultMiss').innerHTML = missText(r.missByKey);
   $('resultNext').textContent = '다음 판';
@@ -152,15 +221,28 @@ function showStageResult() {
   const acc = correct + mistakes ? correct / (correct + mistakes) : null;
   const miss = {};
   for (const r of rs) for (const [k, n] of Object.entries(r.missByKey)) miss[k] = (miss[k] || 0) + n;
+  const saved = saveStageResult(state.records, state.stage.id, acc);
+  const next = STAGES[state.stageIdx + 1];
+
   show('stageDone');
   $('resultTitle').textContent = `${state.stage.title} 끝! ${cheer(acc)}`;
   $('resultAcc').textContent = pct(acc);
-  $('resultRounds').innerHTML = rs.map((r) => `${r.round} <b>${pct(r.accuracy)}</b>`).join(' · ');
+  $('resultGoguma').hidden = false;
+  $('resultGoguma').innerHTML = gogumaIcons(saved.goguma);
+  const notes = [];
+  if (saved.firstClear && next) notes.push(`🔓 ${next.title.split(' · ')[0]}가 열렸어요!`);
+  if (saved.newBest) notes.push('🎉 새 기록!');
+  if (!saved.goguma) notes.push('정확도 70%를 넘으면 고구마를 받아요');
+  $('resultNote').hidden = !notes.length;
+  $('resultNote').textContent = notes.join('  ');
+  $('resultRounds').innerHTML = rs.map((r) => `${escapeHtml(r.round)} <b>${pct(r.accuracy)}</b>`).join(' · ');
   $('resultMiss').innerHTML = missText(miss);
-  $('resultNext').textContent = '한 번 더 하기';
-  resultChunsik(acc, '1단계 끝!');
+  $('resultNext').textContent = '단계 고르기';
+  resultChunsik(acc, `${state.stage.title.split(' · ')[0]} 끝!`);
   $('accuracy').textContent = pct(acc);
   keyboard.setNext(['Enter']);
+  // 다음 단계가 열렸으면 단계 지도에서 그 단계를 골라 둔다
+  state.sel = saved.goguma && next && unlocked(state.stageIdx + 1) ? state.stageIdx + 1 : state.stageIdx;
 }
 
 // ───── 입력 처리 ─────
@@ -187,8 +269,7 @@ function onChange({ raw, base, keys, composing }) {
       shakeCurrentTile();
       playCs.pose('sad'); // 틀리면 베개 안고 우는 춘식이
       playCs.act('oops');
-      const typed = isHangul(ev.key) ? `${ev.key}${objParticle(ev.key)}` : '다른 키를';
-      playCs.say(`${pick(SAD)} (앗! ${ev.expect} 대신 ${typed} 쳤어. ⌫ Backspace로 지우자)`, 'bad');
+      playCs.say(`${pick(SAD)} (${missLine(ev)} ⌫ Backspace로 지우자)`, 'bad');
     } else if (ev.kind === 'extra') {
       if (code) keyboard.flash(code, 'bad');
       playCs.say('춘!! 춘춘!! (⌫ Backspace를 먼저 눌러 줘!)', 'bad');
@@ -200,6 +281,17 @@ function onChange({ raw, base, keys, composing }) {
   }
   render();
   if (judge.done) finishRound();
+}
+
+// 틀렸을 때 무엇을 쳤는지 말로 (Shift를 빼먹은 경우는 따로 알려 준다)
+function missLine({ key, expect }) {
+  const want = keyFor(expect);
+  const got = keyFor(key);
+  if (want?.shift && got && !got.shift && got.code === want.code) {
+    return `앗! ${charName(expect)}${josa(expect, '은', '는')} Shift를 누른 채 쳐야 해.`;
+  }
+  const typed = got ? `${charName(key)}${josa(key, '을', '를')}` : '다른 키를';
+  return `앗! ${charName(expect)} 대신 ${typed} 쳤어.`;
 }
 
 function onLatin() {
@@ -214,17 +306,32 @@ document.addEventListener('keydown', (e) => {
   }
   if (NAV_KEYS.has(e.key)) e.preventDefault(); // 커서 이동·포커스 이동 막기
 
-  if (state.screen === 'play') resetIdle();
-  if (state.screen === 'play' && ARROWS.has(e.key) && !state.judge.hasError) {
-    // F65에서 Fn+W가 켜지면 W A S D 자리가 방향키로 바뀐다
-    const next = keyFor(state.judge.nextKey)?.code;
-    if (WASD.has(next)) setWarn('fnw');
-  }
-
-  if (e.key === 'Enter' && !e.repeat) {
-    if (state.screen === 'home') startStage();
-    else if (state.screen === 'roundDone' && !$('resultScreen').hidden) { state.roundIdx++; startRound(); }
-    else if (state.screen === 'stageDone' && !$('resultScreen').hidden) startStage();
+  if (state.screen === 'home') {
+    if (e.key === 'ArrowLeft') moveSel(-1);
+    else if (e.key === 'ArrowRight') moveSel(1);
+    else if (e.key === 'ArrowUp') moveSel(-MAP_COLS);
+    else if (e.key === 'ArrowDown') moveSel(MAP_COLS);
+    else if (e.key === 'Enter' && !e.repeat) tryStart(state.sel);
+  } else if (state.screen === 'play') {
+    resetIdle();
+    if (ARROWS.has(e.key) && !state.judge.hasError) {
+      // F65에서 Fn+W가 켜지면 W A S D 자리가 방향키로 바뀐다
+      const next = keyFor(state.judge.nextKey)?.code;
+      if (WASD.has(next)) setWarn('fnw');
+    }
+    if (e.key === 'Escape') {
+      // 실수로 누를 수 있어서 두 번 눌러야 나간다
+      if (Date.now() - state.escAt < ESC_MS) goHome(state.stageIdx);
+      else {
+        state.escAt = Date.now();
+        playCs.say('춘? (Esc를 한 번 더 누르면 단계 고르기로 가요)', 'warn');
+      }
+    }
+  } else if (!$('resultScreen').hidden) {
+    if (e.key === 'Enter' && !e.repeat) {
+      if (state.screen === 'roundDone') { state.roundIdx++; startRound(); }
+      else goHome();
+    } else if (e.key === 'Escape') goHome(state.stageIdx);
   }
 
   if (e.code && !keyFor(e.key)) keyboard.flash(e.code, 'press'); // Backspace·Enter 등 눌림 표시
@@ -310,9 +417,12 @@ function render() {
     codes = [];
     guide = { big: '✓', small: '끝!', finger: null };
   } else {
+    const key = keyFor(judge.nextKey);
     codes = codesFor(judge.nextKey);
     const main = codes[codes.length - 1];
-    guide = { big: judge.nextKey, small: `${LATIN_BY_CODE[main] || ''} 자리`, finger: FINGER_BY_CODE[main] };
+    guide = key?.shift
+      ? { big: judge.nextKey, small: `Shift + ${KEY_LABEL[main]}`, finger: FINGER_BY_CODE[main], fingerText: `${FINGER_NAMES[FINGER_BY_CODE[main]]} + Shift` }
+      : { big: judge.nextKey, small: `${KEY_LABEL[main] ?? ''} 자리`, finger: FINGER_BY_CODE[main] };
   }
   keyboard.setNext(codes, state.warn === 'english' || state.warn === 'fnw' ? 'warn' : 'finger');
   hands.setActive(guide.finger ? codes.map((c) => FINGER_BY_CODE[c]).filter(Boolean) : []);
@@ -362,9 +472,11 @@ function resetIdle() {
   state.idleTimer = setTimeout(() => {
     const { judge } = state;
     if (state.screen !== 'play' || state.warn || !judge || judge.hasError || judge.done) return;
-    const code = keyFor(judge.nextKey)?.code;
-    const finger = FINGER_NAMES[FINGER_BY_CODE[code]];
-    if (finger) playCs.say(`춘춘? (${withRo(finger)} ${judge.nextKey}!)`);
+    const key = keyFor(judge.nextKey);
+    const finger = FINGER_NAMES[FINGER_BY_CODE[key?.code]];
+    if (!finger) return;
+    const shift = key.shift ? 'Shift 누른 채 ' : '';
+    playCs.say(`춘춘? (${shift}${withRo(finger)} ${charName(judge.nextKey)}!)`);
   }, IDLE_MS);
 }
 
@@ -409,9 +521,10 @@ function cheer(acc) {
 function missText(miss) {
   const list = Object.entries(miss).sort((a, b) => b[1] - a[1]);
   if (!list.length) return '하나도 안 틀렸어요 👏';
-  return '자주 틀린 키: ' + list.slice(0, 4).map(([k, n]) => `<b>${k}</b> ${n}번`).join(', ');
+  return '자주 틀린 키: ' + list.slice(0, 4).map(([k, n]) => `<b>${escapeHtml(charName(k))}</b> ${n}번`).join(', ');
 }
 
 $('version').textContent = VERSION;
-goHome();
+// 처음엔 열린 단계 중 가장 뒤 단계를 골라 둔다
+goHome(Math.max(0, ...STAGES.map((_, i) => (unlocked(i) ? i : 0))));
 checkForUpdate();

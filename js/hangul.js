@@ -92,9 +92,29 @@ export function toUnits(text) {
   return units;
 }
 
-// 자모 이름에 맞는 조사 (ㄴ을 / ㅏ를)
-export function objParticle(jamo) {
-  if (isJamo(jamo)) return isVowel(jamo) ? '를' : '을'; // 자음 이름(니은, 리을…)은 모두 받침으로 끝남
-  if (isSyllable(jamo)) return (jamo.codePointAt(0) - S_BASE) % 28 ? '을' : '를';
-  return '를';
+// 글자를 말로 읽을 때 쓰는 이름 (문장부호는 이름으로)
+const PUNCT_NAME = { '.': '마침표', ',': '쉼표', '?': '물음표', '!': '느낌표', ' ': '스페이스' };
+const DIGIT_READ = { 0: '영', 1: '일', 2: '이', 3: '삼', 4: '사', 5: '오', 6: '육', 7: '칠', 8: '팔', 9: '구' };
+
+export function charName(ch) {
+  return PUNCT_NAME[ch] || ch;
+}
+
+// 읽었을 때 받침으로 끝나는지 (자음 이름 니은·리을…은 모두 받침으로 끝남, 숫자는 일·이·삼…으로 읽음)
+function endsWithBatchim(ch) {
+  const word = PUNCT_NAME[ch] || DIGIT_READ[ch] || ch;
+  const last = word[word.length - 1];
+  if (isJamo(last)) return !isVowel(last);
+  if (isSyllable(last)) return (last.codePointAt(0) - S_BASE) % 28 !== 0;
+  return false;
+}
+
+// 조사 고르기: josa('ㄴ', '을', '를') → '을'
+export function josa(ch, withBatchim, without) {
+  return endsWithBatchim(ch) ? withBatchim : without;
+}
+
+// 목적격 조사 (ㄴ을 / ㅏ를 / 1을 / 2를)
+export function objParticle(ch) {
+  return josa(ch, '을', '를');
 }

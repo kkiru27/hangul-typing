@@ -114,6 +114,13 @@ for (const [code, [base, shifted]] of Object.entries({ ...JAMO_BY_CODE, ...SYMBO
 }
 CHAR_TO_KEY.set(' ', { code: 'Space', shift: false });
 
+// 키 이름 (안내 카드의 "F 자리", "Shift + R" 같은 글자)
+export const KEY_LABEL = {};
+for (const row of ROWS) {
+  for (const key of row) KEY_LABEL[key.code] = key.symbol ? key.symbol[0] : key.label || key.code;
+}
+KEY_LABEL.Space = '스페이스';
+
 export function keyFor(char) {
   return CHAR_TO_KEY.get(char) || null;
 }
