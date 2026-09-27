@@ -1,8 +1,10 @@
-// 춘식이: 이미지 두 장(서 있는 모습, 고구마 먹는 모습)을 말풍선과 몸짓(CSS 움직임)으로 살린다.
+// 춘식이: 이미지 세 장(서 있음, 고구마 먹음, 베개 안고 울음)을 말풍선과 몸짓(CSS 움직임)으로 살린다.
+// 흰 배경은 tools/cutout.py로 가장자리에서만 지웠다 (코·베개·눈 반짝임·눈물은 보존).
 
 export const POSES = {
   stand: 'img/chunsik.png',
-  goguma: 'img/chunsik-goguma.png', // 흰 배경은 가장자리 flood fill로 지움 (코는 보존)
+  goguma: 'img/chunsik-goguma.png',
+  sad: 'img/chunsik-sad.png',
 };
 
 // 고구마 (직접 그린 그림)
@@ -29,6 +31,7 @@ export class Chunsik {
     this.bubble = el.querySelector('.cs-bubble');
     this.img = el.querySelector('.cs-img');
     this.fx = el.querySelector('.cs-fx');
+    el.dataset.pose = pose;
   }
 
   pose(name) {
@@ -37,13 +40,22 @@ export class Chunsik {
     this.el.dataset.pose = name;
   }
 
-  // 말풍선. tone: '' | 'bad' | 'good' | 'warn'
+  // 말풍선. '춘춘! (좋아!)'처럼 괄호 앞은 춘식이 말, 괄호 안은 해석으로 나눠 보여 준다.
+  // tone: '' | 'bad' | 'good' | 'warn'
   say(text, tone = '') {
     const b = this.bubble;
     b.hidden = !text;
-    if (!text || (b.textContent === text && b.dataset.tone === tone)) return;
-    b.textContent = text;
+    if (!text || (b.dataset.text === text && b.dataset.tone === tone)) return;
+    b.dataset.text = text;
     b.dataset.tone = tone;
+    const m = text.match(/^(.*?)\s*(\(.*\))$/s);
+    if (m) {
+      const meow = Object.assign(document.createElement('b'), { className: 'cs-meow', textContent: m[1] });
+      const trans = Object.assign(document.createElement('span'), { className: 'cs-trans', textContent: m[2] });
+      b.replaceChildren(meow, trans);
+    } else {
+      b.textContent = text;
+    }
     restart(b, 'pop');
   }
 

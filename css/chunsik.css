@@ -8,6 +8,8 @@
 .chunsik.cs-l { --cs-h: 140px; }
 /* 연습 화면: 말풍선은 춘식이 왼쪽에 (세로 자리를 차지하지 않게) */
 .chunsik.cs-m { position: relative; --cs-h: 104px; }
+/* 그림이 바뀌어도(서 있음 ↔ 울음) 옆 칸이 흔들리지 않게 폭 고정 */
+.chunsik.cs-m .cs-body { width: calc(var(--cs-h) * 1.22); display: flex; justify-content: center; }
 .chunsik.cs-m .cs-bubble {
   position: absolute; right: calc(100% + 14px); top: 6%;
   margin: 0; width: max-content; max-width: 250px;
@@ -24,7 +26,7 @@
   -webkit-user-drag: none; user-select: none; -webkit-user-select: none;
 }
 /* 서 있는 그림은 여백이 넓어서 조금 크게 */
-.chunsik:not([data-pose="goguma"]) .cs-img { height: calc(var(--cs-h) * 1.18); margin: calc(var(--cs-h) * -.09) 0; }
+.chunsik[data-pose="stand"] .cs-img { height: calc(var(--cs-h) * 1.18); margin: calc(var(--cs-h) * -.09) 0; }
 .cs-img.hop   { animation: cs-hop .34s ease-out; }
 .cs-img.oops  { animation: cs-oops .5s ease-in-out; }
 .cs-img.cheer { animation: cs-cheer .8s ease-in-out 2; }
@@ -58,6 +60,9 @@
 .cs-bubble[data-tone="warn"] { border-color: #f0c24b; color: var(--warn-ink); }
 .cs-bubble.pop { animation: cs-pop .25s ease-out; }
 .cs-l .cs-bubble { font-size: 20px; padding: 8px 18px; }
+/* 춘식이 말 + (해석) */
+.cs-meow { display: block; font-weight: 900; letter-spacing: .5px; }
+.cs-trans { display: block; font-size: .82em; font-weight: 700; opacity: .8; }
 
 @keyframes cs-bob   { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes cs-party { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-14px) rotate(-6deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-14px) rotate(6deg); } }

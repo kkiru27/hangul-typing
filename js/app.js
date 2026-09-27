@@ -20,7 +20,10 @@ const playCs = new Chunsik($('playChunsik'));
 const resultCs = new Chunsik($('resultChunsik'), { size: 'l' });
 $('trackGoal').innerHTML = GOGUMA_SVG;
 
-const CHEERS = ['좋아!', '잘한다!', '척척!', '최고야!', '멋져!', '우와!'];
+// 춘식이 말투: 고양이 말 + (해석)
+const CHEERS = ['춘춘!! (좋아!)', '츈츈춘~! (잘한다!)', '춘! 춘! (척척!)', '춘춘춘!! (최고야!)', '츈~ 춘춘! (멋져!)', '춘?! 춘춘! (우와!)'];
+const SAD = ['츄... 춘...', '춘... 츈츈...', '츈... 춘...'];
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const IDLE_MS = 7000;
 
 const LATIN_BY_CODE = Object.fromEntries(ROWS.flat().filter((k) => k.jamo).map((k) => [k.code, k.label]));
@@ -64,7 +67,7 @@ function goHome() {
     .join('');
   keyboard.setFocusSet(null);
   keyboard.setNext(['Enter']);
-  homeCs.say('안녕! 나랑 타자 연습하자');
+  homeCs.say('츈츈! 춘춘춘~ (안녕! 나랑 타자 연습하자)');
 }
 
 function startStage() {
@@ -82,7 +85,7 @@ function startRound() {
   state.streak = 0;
   bridge.rebase();
   playCs.pose('stand');
-  playCs.say(round.hello || '같이 해 보자!');
+  playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
   $('trackRunner').querySelector('img').src = 'img/chunsik.png';
 
@@ -108,7 +111,7 @@ function finishRound() {
   clearTimeout(state.idleTimer);
   playCs.pose('goguma');
   playCs.act('cheer');
-  playCs.say('고구마 도착!', 'good');
+  playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
   $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
@@ -119,9 +122,9 @@ function resultChunsik(acc, doneText) {
   const good = acc != null && acc >= 0.85;
   resultCs.pose(good ? 'goguma' : 'stand');
   resultCs.mood(good ? 'party' : null);
-  if (acc >= 0.95) resultCs.say(`${doneText} 고구마 냠냠!`, 'good');
-  else if (good) resultCs.say('맛있다! 잘했어!', 'good');
-  else resultCs.say('괜찮아, 한 번 더 해 보자!');
+  if (acc >= 0.95) resultCs.say(`춘춘춘~!! (${doneText} 고구마 냠냠!)`, 'good');
+  else if (good) resultCs.say('츈츈! (맛있다! 잘했어!)', 'good');
+  else resultCs.say('춘... 춘춘! (괜찮아, 한 번 더 해 보자!)');
 }
 
 function showRoundResult() {
@@ -170,20 +173,24 @@ function onChange({ keys }) {
       if (code) keyboard.flash(code, 'ok');
       playCs.act('hop');
       hopRunner();
-      if (ev.kind === 'ok' && ++state.streak % 5 === 0) playCs.say(CHEERS[Math.floor(Math.random() * CHEERS.length)], 'good');
+      if (ev.kind === 'ok' && ++state.streak % 5 === 0) playCs.say(pick(CHEERS), 'good');
     } else if (ev.kind === 'miss') {
       if (code) keyboard.flash(code, 'bad');
       state.streak = 0;
       shakeCurrentTile();
+      playCs.pose('sad'); // 틀리면 베개 안고 우는 춘식이
       playCs.act('oops');
       const typed = isHangul(ev.key) ? `${ev.key}${objParticle(ev.key)}` : '다른 키를';
-      playCs.say(`앗! ${ev.expect} 대신 ${typed} 쳤어. ⌫ Backspace로 지우자`, 'bad');
+      playCs.say(`${pick(SAD)} (앗! ${ev.expect} 대신 ${typed} 쳤어. ⌫ Backspace로 지우자)`, 'bad');
     } else if (ev.kind === 'extra') {
       if (code) keyboard.flash(code, 'bad');
-      playCs.say('⌫ Backspace를 먼저 눌러 줘!', 'bad');
+      playCs.say('춘!! 춘춘!! (⌫ Backspace를 먼저 눌러 줘!)', 'bad');
     }
   }
-  if (hadError && !judge.hasError && !judge.done) playCs.say('좋아, 다시!');
+  if (hadError && !judge.hasError) {
+    playCs.pose('stand');
+    playCs.say('춘! (좋아, 다시!)');
+  }
   render();
   if (judge.done) finishRound();
 }
@@ -235,9 +242,9 @@ function checkFocusSoon() {
 // ───── 그리기 ─────
 
 const WARNINGS = {
-  english: { icon: '🔤', text: '지금 영어로 입력돼요. Caps Lock을 눌러 한글로 바꿔요', chunsik: '어? 영어가 나와!' },
-  fnw: { icon: '⌨️', text: 'Fn+W가 눌린 것 같아요. Fn+W를 한 번 더 눌러주세요', chunsik: '어? 방향키가 나와!' },
-  focus: { icon: '👆', text: '화면을 한 번 톡 눌러 주세요', chunsik: '나를 톡 눌러 줘!' },
+  english: { icon: '🔤', text: '지금 영어로 입력돼요. Caps Lock을 눌러 한글로 바꿔요', chunsik: '춘?! (어? 영어가 나와!)' },
+  fnw: { icon: '⌨️', text: 'Fn+W가 눌린 것 같아요. Fn+W를 한 번 더 눌러주세요', chunsik: '츈츈?! (어? 방향키가 나와!)' },
+  focus: { icon: '👆', text: '화면을 한 번 톡 눌러 주세요', chunsik: '춘춘~ (나를 톡 눌러 줘!)' },
 };
 
 function setWarn(kind) {
@@ -327,7 +334,7 @@ function resetIdle() {
     if (state.screen !== 'play' || state.warn || !judge || judge.hasError || judge.done) return;
     const code = keyFor(judge.nextKey)?.code;
     const finger = FINGER_NAMES[FINGER_BY_CODE[code]];
-    if (finger) playCs.say(`${withRo(finger)} ${judge.nextKey}!`);
+    if (finger) playCs.say(`춘춘? (${withRo(finger)} ${judge.nextKey}!)`);
   }, IDLE_MS);
 }
 

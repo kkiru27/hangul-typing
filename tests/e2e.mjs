@@ -64,11 +64,14 @@ await page.screenshot({ path: `${OUT}/02-play.png` });
 const wrong = ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ'].find((j) => j !== targets[3]);
 await press(wrong);
 check((await text('#playChunsik .cs-bubble')).includes('Backspace로 지우자'), '틀리면 춘식이가 Backspace 안내');
+check(/[춘츈츄]/.test(await page.locator('#playChunsik .cs-meow').innerText()), '말투: 춘춘 + (해석)');
+check((await page.locator('#playChunsik').getAttribute('data-pose')) === 'sad', '틀리면 우는 춘식이');
 check(await page.locator('.key[data-code="Backspace"]').evaluate((el) => el.classList.contains('next')), 'Backspace 키 강조');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/03-miss.png` });
 await press('Backspace');
-check((await text('#playChunsik .cs-bubble')) === '좋아, 다시!', 'Backspace로 지우면 "좋아, 다시!"');
+check((await text('#playChunsik .cs-bubble')).includes('(좋아, 다시!)'), 'Backspace로 지우면 "춘! (좋아, 다시!)"');
+check((await page.locator('#playChunsik').getAttribute('data-pose')) === 'stand', '지우면 다시 서 있는 춘식이');
 
 // 영어 모드
 await commit();
