@@ -6,7 +6,7 @@
 // 조합 중에 입력칸 값을 코드로 고치면 iOS에서 글자가 겹쳐 들어가는 문제가 있어서,
 // 값을 비우는 일은 조합 중이 아닐 때만 한다. 조합 중이면 "여기서부터 새 판" 위치(base)만 옮긴다.
 
-import { toKeys } from './hangul.js?v=202609270822';
+import { toKeys } from './hangul.js?v=202609270830';
 
 const LATIN_G = /[A-Za-z]/g;
 
@@ -57,7 +57,7 @@ export class InputBridge {
     this.lastRaw = raw;
     const keys = toKeys(raw);
     if (keys.length < this.base) this.base = keys.length; // 이전 판 글자까지 지운 경우
-    this.onChange?.({ raw, keys: keys.slice(this.base), composing: this.composing });
+    this.onChange?.({ raw, base: this.base, keys: keys.slice(this.base), composing: this.composing });
   }
 
   // 새 판 시작: 지금까지 입력된 것은 무시한다.

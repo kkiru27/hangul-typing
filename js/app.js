@@ -1,15 +1,15 @@
 // 한글 타자 연습 앱 (1차: 자리 연습 1단계)
 
-import { Judge } from './judge.js?v=202609270822';
-import { InputBridge } from './input-bridge.js?v=202609270822';
-import { KeyboardView } from './keyboard-view.js?v=202609270822';
-import { HandsView } from './hands-view.js?v=202609270822';
-import { STAGES, buildKeysRound } from './lessons.js?v=202609270822';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, fingerTone, WASD, ARROWS, ROWS } from './layout.js?v=202609270822';
-import { isHangul, objParticle } from './hangul.js?v=202609270822';
-import { VERSION } from './version.js?v=202609270822';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609270822';
-import { checkForUpdate } from './update-check.js?v=202609270822';
+import { Judge } from './judge.js?v=202609270830';
+import { InputBridge } from './input-bridge.js?v=202609270830';
+import { KeyboardView } from './keyboard-view.js?v=202609270830';
+import { HandsView } from './hands-view.js?v=202609270830';
+import { STAGES, buildKeysRound } from './lessons.js?v=202609270830';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, fingerTone, WASD, ARROWS, ROWS } from './layout.js?v=202609270830';
+import { isHangul, objParticle, toUnits } from './hangul.js?v=202609270830';
+import { VERSION } from './version.js?v=202609270830';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609270830';
+import { checkForUpdate } from './update-check.js?v=202609270830';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,6 +38,7 @@ const state = {
   results: [],
   warn: null,          // english | fnw | focus | null
   streak: 0,           // 연속으로 맞힌 키 (춘식이 칭찬용)
+  input: { raw: '', base: 0, composing: false }, // 입력칸 값 (친 글자 막대용)
   idleTimer: 0,
 };
 
@@ -48,6 +49,9 @@ function show(screen) {
   $('homeScreen').hidden = screen !== 'home';
   $('playScreen').hidden = screen !== 'play';
   $('resultScreen').hidden = !(screen === 'roundDone' || screen === 'stageDone');
+  // 연습 중에는 위쪽 막대 가운데에 판 이름과 고구마 길
+  $('roundHead').hidden = screen !== 'play';
+  $('stageLabel').hidden = screen === 'play';
   if (screen !== 'play') setWarn(null);
 }
 
@@ -85,13 +89,14 @@ function startRound() {
   state.judge = new Judge(items.join(''));
   state.streak = 0;
   bridge.rebase();
+  state.input = { raw: '', base: 0, composing: false };
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609270822';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609270830';
 
   $('stageLabel').textContent = stage.title;
-  $('roundLabel').textContent = `${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
+  $('roundLabel').textContent = `${stage.title.split(' · ')[0]} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
   $('tiles').innerHTML = tileRows(state.judge.units.length)
     .map(([a, b]) => `<div class="tile-row">${state.judge.units.slice(a, b).map((u) => `<div class="tile">${u.ch}</div>`).join('')}</div>`)
     .join('');
@@ -114,7 +119,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609270822';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609270830';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -160,8 +165,9 @@ function showStageResult() {
 
 // ───── 입력 처리 ─────
 
-function onChange({ keys }) {
+function onChange({ raw, base, keys, composing }) {
   if (state.screen !== 'play') return;
+  state.input = { raw, base, composing };
   const { judge } = state;
   const hadError = judge.hasError;
   const events = judge.update(keys);
@@ -282,6 +288,7 @@ function render() {
     }
   });
 
+  renderTyped();
   $('progress').textContent = `${judge.okLen}/${judge.target.length}`;
   $('track').style.setProperty('--p', judge.okLen / judge.target.length);
   $('accuracy').textContent = pct(judge.accuracy);
@@ -316,6 +323,28 @@ function render() {
   $('guideJamo').textContent = guide.big;
   $('guideKey').textContent = guide.small;
   $('guideFinger').textContent = guide.fingerText || FINGER_NAMES[guide.finger] || '';
+}
+
+// 친 글자 막대: 이번 판에 친 글자를 입력기가 보여 주는 그대로 (ㅁ+ㅏ → 마).
+// 틀린 키가 섞인 글자는 빨갛게, 아직 조합 중인 마지막 글자는 밑줄.
+const TYPED_MAX = 20;
+function renderTyped() {
+  const { judge, input } = state;
+  const units = toUnits(input.raw).filter((u) => u.end > input.base && u.keys.length);
+  const html = units.map((u, i) => {
+    const end = u.end - input.base;
+    const cls = [end <= judge.okLen ? 'ok' : 'bad'];
+    if (input.composing && i === units.length - 1) cls.push('composing');
+    return `<span class="${cls.join(' ')}">${u.ch === ' ' ? '&nbsp;' : escapeHtml(u.ch)}</span>`;
+  });
+  const shown = html.length > TYPED_MAX ? ['<span class="more">…</span>', ...html.slice(-TYPED_MAX + 1)] : html;
+  $('typedText').innerHTML = shown.join('');
+  $('typedHint').hidden = units.length > 0;
+  $('typedBar').classList.toggle('has-error', judge.hasError);
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 // 한 줄에 12개 이하로, 줄마다 개수를 고르게 (20개 → 10+10, 24개 → 12+12)

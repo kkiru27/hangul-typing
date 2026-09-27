@@ -57,6 +57,8 @@ const targets = await page.locator('#tiles .tile').allInnerTexts();
 for (const k of targets.slice(0, 3)) await press(k);
 check((await text('#progress')) === `3/${targets.length}`, `조합 중에도 진행 3/${targets.length}`);
 check((await text('#accuracy')) === '100%', '정확도 100%');
+check((await page.locator('#typedText').innerText()) === ime.text, `친 글자 막대에 입력기 글자 그대로 (${ime.text})`);
+check(await page.locator('#typedText .composing').count() === 1, '조합 중인 글자는 밑줄');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/02-play.png` });
 
@@ -64,6 +66,7 @@ await page.screenshot({ path: `${OUT}/02-play.png` });
 const wrong = ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ'].find((j) => j !== targets[3]);
 await press(wrong);
 check((await text('#playChunsik .cs-bubble')).includes('Backspace로 지우자'), '틀리면 춘식이가 Backspace 안내');
+check(await page.locator('#typedText .bad').count() >= 1, '틀린 키가 섞인 글자는 막대에서 빨갛게');
 check(/[춘츈츄]/.test(await page.locator('#playChunsik .cs-meow').innerText()), '말투: 춘춘 + (해석)');
 check((await page.locator('#playChunsik').getAttribute('data-pose')) === 'sad', '틀리면 우는 춘식이');
 check(await page.locator('.key[data-code="Backspace"]').evaluate((el) => el.classList.contains('next')), 'Backspace 키 강조');

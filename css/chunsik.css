@@ -73,8 +73,9 @@
 @keyframes cs-pop   { 0% { transform: scale(.85); } 70% { transform: scale(1.05); } 100% { transform: none; } }
 
 /* 고구마까지 가는 길 */
-.round-head { display: flex; align-items: center; gap: 18px; }
-.track { position: relative; width: 380px; height: 44px; }
+.round-head { display: flex; align-items: center; gap: 14px; }
+.round-head[hidden] { display: none; }
+.track { position: relative; width: 320px; height: 42px; }
 .track-line {
   position: absolute; left: 16px; right: 40px; top: 50%;
   height: 10px; margin-top: -1px;

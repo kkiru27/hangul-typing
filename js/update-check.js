@@ -1,5 +1,5 @@
 // 새 버전이 올라왔는데 사파리가 옛 페이지(캐시)를 보여 주면, 새 주소로 한 번 다시 연다.
-import { BUILD } from './version.js?v=202609270822';
+import { BUILD } from './version.js?v=202609270830';
 
 export async function checkForUpdate() {
   try {

@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>한글 타자 연습</title>
-<link rel="stylesheet" href="css/common.css?v=202609270822">
-<link rel="stylesheet" href="css/app.css?v=202609270822">
-<link rel="stylesheet" href="css/chunsik.css?v=202609270822">
-<link rel="preload" as="image" href="img/chunsik.png?v=202609270822">
-<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270822">
-<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270822">
+<link rel="stylesheet" href="css/common.css?v=202609270830">
+<link rel="stylesheet" href="css/app.css?v=202609270830">
+<link rel="stylesheet" href="css/chunsik.css?v=202609270830">
+<link rel="preload" as="image" href="img/chunsik.png?v=202609270830">
+<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270830">
+<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270830">
 </head>
 <body>
 <!-- 키보드 입력을 받는 숨은 입력칸 (한글 조합은 여기서 일어난다) -->
@@ -19,7 +19,17 @@
 <div id="app">
   <header class="topbar">
     <div class="brand">한글 타자 연습</div>
-    <div class="stage-label" id="stageLabel"></div>
+    <div class="top-center">
+      <div class="stage-label" id="stageLabel"></div>
+      <div class="round-head" id="roundHead" hidden>
+        <div class="round-label" id="roundLabel"></div>
+        <div class="track" id="track">
+          <div class="track-line"><div class="track-fill" id="trackFill"></div></div>
+          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270830" alt="" draggable="false"></div>
+          <div class="track-goal" id="trackGoal"></div>
+        </div>
+      </div>
+    </div>
     <div class="stats">
       <div class="stat"><span>진행</span><b id="progress">–</b></div>
       <div class="stat"><span>정확도</span><b id="accuracy">–</b></div>
@@ -45,15 +55,13 @@
 
     <!-- 연습 화면 -->
     <section id="playScreen" class="screen play" hidden>
-      <div class="round-head">
-        <div class="round-label" id="roundLabel"></div>
-        <div class="track" id="track">
-          <div class="track-line"><div class="track-fill" id="trackFill"></div></div>
-          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270822" alt="" draggable="false"></div>
-          <div class="track-goal" id="trackGoal"></div>
-        </div>
-      </div>
       <div class="tiles" id="tiles"></div>
+      <!-- 친 글자가 보이는 입력 막대 (검색창처럼) -->
+      <div class="typed-bar" id="typedBar">
+        <span class="tb-icon" aria-hidden="true">⌨️</span>
+        <span class="tb-line"><span class="tb-text" id="typedText"></span><span class="tb-caret"></span></span>
+        <span class="tb-hint" id="typedHint">여기에 친 글자가 보여요</span>
+      </div>
       <div class="guide">
         <div id="playChunsik"></div>
         <div id="banner" class="banner" hidden>
@@ -93,6 +101,6 @@
 
 <div class="rotate-hint">아이패드를 <b>가로</b>로 돌려 주세요</div>
 
-<script type="module" src="js/app.js?v=202609270822"></script>
+<script type="module" src="js/app.js?v=202609270830"></script>
 </body>
 </html>
