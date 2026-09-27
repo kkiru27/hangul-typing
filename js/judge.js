@@ -6,7 +6,7 @@
 //   · 틀린 뒤 지우기 전에 더 친 키는 한 번만 센다 (초보가 연달아 틀려도 점수가 무너지지 않게)
 //   · 지웠다가 다시 친 키는 두 번 세지 않는다
 
-import { toKeys, toUnits } from './hangul.js?v=202609270905';
+import { toKeys, toUnits } from './hangul.js?v=202609270912';
 
 const LATIN = /^[A-Za-z]$/;
 
@@ -85,6 +85,12 @@ export class Judge {
       if (u.start < this.okLen) return 'typing';
       return 'pending';
     });
+  }
+
+  // 첫 키부터 지금(또는 끝낸 때)까지 걸린 시간(ms). 타수 계산용
+  elapsed(now = Date.now()) {
+    if (!this.startedAt) return 0;
+    return (this.finishedAt || now) - this.startedAt;
   }
 
   result() {

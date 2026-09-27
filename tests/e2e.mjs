@@ -177,15 +177,12 @@ check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지
 await page.goto(`${BASE}/index.html?all`);
 resetIme();
 check(await page.locator('.stage-card.locked').count() === 0, '?all → 모든 단계 열림');
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '9', '모두 열리면 마지막 단계(9단계)가 골라져 있음');
-check(await page.locator('.stage-card').count() === 4, '2쪽에는 4개');
-await page.keyboard.press('ArrowUp');   // 9 → 6
-await page.keyboard.press('ArrowUp');   // 6 → 3 (1쪽)
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '3' && await page.locator('.stage-card').count() === 6, '위 방향키로 앞 쪽으로 넘어감');
-await page.keyboard.press('ArrowDown'); // 3 → 6
-await page.keyboard.press('ArrowDown'); // 6 → 9
-await page.keyboard.press('ArrowLeft');
-await page.keyboard.press('ArrowLeft'); // 9 → 7(Shift)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '10', '모두 열리면 마지막 단계(10단계)가 골라져 있음');
+check(await page.locator('.stage-card').count() === 5, '2쪽에는 5개');
+await page.keyboard.press('ArrowUp');   // 10 → 7
+await page.keyboard.press('ArrowUp');   // 7 → 4 (1쪽)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '4' && await page.locator('.stage-card').count() === 6, '위 방향키로 앞 쪽으로 넘어감');
+await page.keyboard.press('ArrowDown'); // 4 → 7(Shift)
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '7', '방향키로 7단계(Shift) 고르기');
 await page.keyboard.press('Enter');
 const t5 = await page.locator('#tiles .tile').allInnerTexts();
@@ -227,10 +224,41 @@ check((await page.locator('#checks').innerText()).includes('compositionstart'), 
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/09-test-page.png`, fullPage: true });
 
+// ── 짧은 글 + 타수 ──
+await page.goto(`${BASE}/index.html?all`);
+resetIme();
+await page.keyboard.press('Enter'); // 마지막 단계 = 10단계 짧은 글
+check(await page.locator('#sentence').isVisible() && await page.locator('#speedStat').isVisible(), '짧은 글 화면 + 타수 표시');
+const headH = (await page.locator('.topbar').boundingBox()).height;
+const labelH = Math.max(...await page.locator('.stat span').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height)));
+check(headH <= 64 && labelH <= 20, `위쪽 막대 한 줄 (높이 ${Math.round(headH)}px, 이름표 ${Math.round(labelH)}px)`);
+const sentenceNow = () => page.locator('#sentBig > span:not(.sent-enter)').evaluateAll((els) => els.map((el) => (el.classList.contains('sp') ? ' ' : el.textContent)).join(''));
+const s1 = await sentenceNow();
+check(/[.!?]$/.test(s1), `문장 (${s1})`);
+const k1 = toKeys(s1);
+await press(k1[0]);
+await page.waitForTimeout(2100); // 타수는 2초 넘게 친 뒤부터 보인다
+for (const k of k1.slice(1)) await press(k);
+check(await page.locator('.sent-enter').isVisible() && await page.locator('.key[data-code="Enter"]').evaluate((el) => el.classList.contains('next')), '문장을 다 치면 Enter 안내');
+check(/^\d+타$/.test(await text('#speed')), `타수 표시 (${await text('#speed')})`);
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/16-sentence.png` });
+await page.keyboard.press('Enter');
+await page.waitForTimeout(100);
+check((await text('#progress')) === '1/5' && (await sentenceNow()) !== s1, 'Enter → 다음 문장 (1/5)');
+resetIme();
+const s2 = await sentenceNow();
+for (const k of toKeys(s2)) await press(k);
+await press(' ');
+await page.waitForTimeout(100);
+check((await text('#progress')) === '2/5', '스페이스바로도 다음 문장 (2/5)');
+check((await page.inputValue('#ime')) === '', '다음 문장에서 입력칸 비움');
+await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+
 // ── 게임: 고구마 비 ──
 await page.goto(`${BASE}/index.html?all`);
 resetIme();
-await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowLeft'); // 9 → 6 → 3 → 게임
+await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); // 10 → 7 → 4 → 3 → 게임
 check((await text('#homeChunsik .cs-bubble')).includes('고구마 비'), '게임 카드 고르기');
 await page.keyboard.press('Enter');
 check(await page.locator('#gameScreen').isVisible(), '게임 화면');
@@ -275,7 +303,7 @@ const page2 = await browser.newPage({ viewport: { width: W, height: H } });
 page2.on('pageerror', (e) => errors.push(String(e)));
 await page2.clock.install();
 await page2.goto(`${BASE}/index.html?all`);
-await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowLeft');
+await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowLeft'); await page2.keyboard.press('ArrowLeft');
 await page2.keyboard.press('Enter');
 await page2.clock.runFor(100000);
 await page2.clock.runFor(2000);

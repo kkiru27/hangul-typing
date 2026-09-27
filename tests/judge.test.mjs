@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
 import { gogumaFor, saveStageResult, isUnlocked, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, buildKeysRound, hasRiskyPair, stageChars, stageTitle, shuffleWords, wordsForRound } from '../js/lessons.js';
+import { STAGES, buildKeysRound, hasRiskyPair, stageChars, stageTitle, shuffleItems, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, ROWS } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
@@ -159,7 +159,8 @@ test('단계 순서와 제목 (게임은 번호 없이)', () => {
   assert.equal(stageTitle(1), '2단계 · 기본자리 낱말');
   assert.equal(stageTitle(2), '게임 · 고구마 비');
   assert.equal(stageTitle(3), '3단계 · 왼손 윗줄');
-  assert.equal(stageTitle(STAGES.length - 1), '9단계 · 숫자·부호');
+  assert.equal(stageTitle(STAGES.length - 2), '9단계 · 숫자·부호');
+  assert.equal(stageTitle(STAGES.length - 1), '10단계 · 짧은 글');
 });
 
 test('게임은 깨지 않아도 다음 단계가 열림', () => {
@@ -175,6 +176,16 @@ test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () =>
   for (const stage of STAGES) {
     if (stage.type === 'keys') {
       for (const ch of stageChars(stage)) learned.add(ch);
+      continue;
+    }
+    if (stage.type === 'sentences') {
+      for (const t of stage.sentences) {
+        const bad = toKeys(t).filter((k) => !learned.has(k));
+        assert.deepEqual(bad, [], `${stage.id}: '${t}'에 아직 안 배운 키 ${bad.join(' ')}`);
+        assert.match(t, /[.!?]$/, `${stage.id}: '${t}'는 문장부호로 끝나야 함`);
+        assert.ok(!/\s\s|^\s|\s$/.test(t), `${stage.id}: '${t}' 띄어쓰기`);
+      }
+      assert.ok(stage.sentences.length >= stage.rounds.reduce((n, r) => n + r.count, 0), '문장이 판보다 적음');
       continue;
     }
     if (stage.type !== 'words') continue;
@@ -193,14 +204,14 @@ test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () =>
 
 test('낱말 판 만들기: 섞은 순서를 판마다 이어서, 모자라면 처음부터', () => {
   const stage = STAGES.find((s) => s.type === 'words');
-  const order = shuffleWords(stage);
+  const order = shuffleItems(stage);
   assert.equal(new Set(order).size, Object.keys(stage.words).length);
-  const r0 = wordsForRound(order, stage, 0);
-  const r1 = wordsForRound(order, stage, 1);
+  const r0 = itemsForRound(order, stage, 0);
+  const r1 = itemsForRound(order, stage, 1);
   assert.equal(r0.length, stage.rounds[0].count);
   assert.deepEqual(r1[0], order[stage.rounds[0].count]);
   assert.equal(new Set([...r0, ...r1]).size, r0.length + r1.length); // 앞 두 판은 겹치지 않음
-  const all = stage.rounds.flatMap((_, i) => wordsForRound(order, stage, i));
+  const all = stage.rounds.flatMap((_, i) => itemsForRound(order, stage, i));
   assert.ok(all.every(Boolean));
 });
 
@@ -214,6 +225,27 @@ test('낱말 + 스페이스를 입력기 흉내로 판정 (스페이스가 조�
   const { judge, log } = run('하마 ', [...toKeys('하마'), 'ㅇ']);
   assert.equal(log.at(-1), 'miss');
   assert.equal(judge.missByKey[' '], 1);
+});
+
+test('짧은 글 문장을 입력기 흉내로 판정 (띄어쓰기·겹받침·쌍자음·문장부호)', () => {
+  const stage = STAGES.find((s) => s.type === 'sentences');
+  for (const t of stage.sentences) {
+    const { judge, log, text } = run(t, toKeys(t));
+    assert.equal(text, t);
+    assert.ok(log.every((k) => k === 'ok'), `${t}: ${log.join(',')}`);
+    assert.equal(judge.done, true);
+  }
+});
+
+test('타수용 경과 시간', () => {
+  const judge = new Judge('하');
+  assert.equal(judge.elapsed(), 0);
+  judge.update(['ㅎ']);
+  judge.startedAt -= 3000;
+  assert.ok(judge.elapsed() >= 3000);
+  judge.update(['ㅎ', 'ㅏ']);
+  const e = judge.elapsed();
+  assert.equal(judge.elapsed(Date.now() + 99999), e); // 끝난 뒤에는 늘지 않음
 });
 
 test('Shift 글자·숫자·문장부호도 입력기 흉내로 판정', () => {
@@ -244,6 +276,13 @@ test('고구마와 단계 열림', () => {
   assert.equal(rec[STAGES[0].id].goguma, 2);
   assert.equal(rec[STAGES[0].id].plays, 3);
   assert.equal(totalGoguma(STAGES, rec), 2);
+  // 타수 최고 기록
+  const r2 = {};
+  saveStageResult(r2, 'x', 0.9, 80);
+  const c = saveStageResult(r2, 'x', 0.9, 95);
+  assert.deepEqual([c.newBestCpm, c.bestCpm], [true, 95]);
+  const d = saveStageResult(r2, 'x', 0.9, 70);
+  assert.deepEqual([d.newBestCpm, d.bestCpm], [false, 95]);
   // 순서가 바뀌어 앞 단계를 안 깼어도, 이미 깬 단계는 열려 있음
   const moved = { [STAGES[3].id]: { goguma: 1 } };
   assert.equal(isUnlocked(STAGES, moved, 3), true);

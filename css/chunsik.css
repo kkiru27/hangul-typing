@@ -75,7 +75,7 @@
 /* 고구마까지 가는 길 */
 .round-head { display: flex; align-items: center; gap: 14px; }
 .round-head[hidden] { display: none; }
-.track { position: relative; width: 320px; height: 42px; }
+.track { position: relative; width: 280px; height: 42px; }
 .track-line {
   position: absolute; left: 16px; right: 40px; top: 50%;
   height: 10px; margin-top: -1px;

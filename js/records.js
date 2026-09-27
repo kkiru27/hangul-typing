@@ -23,7 +23,8 @@ export function loadRecords() {
 }
 
 // 한 단계를 끝냈을 때 기록을 고치고, 화면에 보여 줄 소식을 돌려준다.
-export function saveStageResult(records, stageId, acc) {
+// cpm: 타수(1분에 맞게 친 키 수). 낱말·문장 단계만 넘긴다.
+export function saveStageResult(records, stageId, acc, cpm = null) {
   const prev = records[stageId] || { best: null, goguma: 0, plays: 0 };
   const goguma = gogumaFor(acc);
   records[stageId] = {
@@ -31,12 +32,15 @@ export function saveStageResult(records, stageId, acc) {
     goguma: Math.max(prev.goguma, goguma),
     plays: prev.plays + 1,
     lastAt: Date.now(),
+    ...(cpm != null || prev.bestCpm != null ? { bestCpm: Math.max(prev.bestCpm ?? 0, cpm ?? 0) } : {}),
   };
   try { localStorage.setItem(KEY, JSON.stringify(records)); } catch { /* 저장 못 해도 진행 */ }
   return {
     goguma,
     newBest: prev.best != null && acc != null && acc > prev.best,
     firstClear: prev.goguma === 0 && goguma > 0,
+    newBestCpm: cpm != null && prev.bestCpm != null && cpm > prev.bestCpm,
+    bestCpm: records[stageId].bestCpm ?? null,
   };
 }
 

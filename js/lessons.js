@@ -8,11 +8,12 @@
 //            한 판(round): intro(정해진 순서) + 나머지는 pool에서 무작위, 모두 length개
 //   'words'  낱말 연습: 낱말을 치고 스페이스바로 다음 낱말. 한 판에 count개
 //   'game'   게임(고구마 비). optional: 깨지 않아도 다음 단계가 열린다. 단계 번호 대신 '게임'
-//   (다음) 'sentences' 짧은 글, 'long' 긴 글
+//   'sentences' 짧은 글: 문장을 끝까지 치고 Enter(또는 스페이스바)로 다음 문장. 모든 문장은 문장부호로 끝난다
+//   (다음) 'long' 긴 글
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js?v=202609270905';
+import { toKeys } from './hangul.js?v=202609270912';
 
 // 낱말 → 그림 (그림이 없으면 빈칸)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말
@@ -38,6 +39,18 @@ const WORDS_ALL = {
 };
 
 const WORD_TIP = '낱말을 다 치면 스페이스바를 엄지로 눌러 다음 낱말로 가요.';
+
+// 짧은 글 (직접 지은 문장). 문장부호로 끝나서 마지막 글자 조합이 깔끔하게 끝난다
+const SENTENCES = [
+  '춘식이는 고구마를 좋아해요.', '오늘은 날씨가 맑아요.', '나는 타자 연습을 해요.', '고양이가 창밖을 봐요.',
+  '엄마와 함께 산책을 가요.', '아침에 우유를 마셨어요.', '친구에게 편지를 써요.', '하늘에 구름이 떠 있어요.',
+  '동생이 그림을 그려요.', '우리 집 강아지는 귀여워요.', '비가 오면 우산을 써요.', '고구마는 달콤하고 맛있어요!',
+  '오늘 무엇을 할까?', '책을 읽으면 즐거워요.', '손가락이 척척 움직여요!', '바다에서 조개를 주웠어요.',
+  '봄에는 꽃이 활짝 펴요.', '겨울에는 눈사람을 만들어요.', '춘식이가 낮잠을 자요.', '사과 두 개, 귤 세 개.',
+  '내일도 같이 놀자!', '키보드를 보지 않고 쳐 봐요.', '천천히, 정확하게 쳐요.', '밥을 먹고 이를 닦아요.',
+  '우리 반 친구들은 친절해요.', '공원에서 자전거를 탔어요.', '별이 반짝반짝 빛나요.', '배가 고프면 고구마를 먹어요.',
+  '누가 제일 빨리 칠까?', '오늘도 잘했어요!',
+];
 
 export const STAGES = [
   {
@@ -167,6 +180,20 @@ export const STAGES = [
       { title: '문장부호', hello: '춘춘?! (점, 쉼표, 물음표, 느낌표!)', intro: '.,.,?!', pool: '.,?!1234567890', length: 20 },
     ],
   },
+  {
+    id: 'sentences-1',
+    group: '짧은 글',
+    name: '짧은 글',
+    type: 'sentences',
+    sentences: SENTENCES,
+    preview: '춘식이는 고구마를…',
+    tip: '문장을 끝까지 치고 Enter를 누르면 다음 문장이에요. 띄어쓰기는 스페이스바!',
+    rounds: [
+      { title: '문장 1', hello: '춘! 춘춘! (이제 문장을 쳐 보자!)', count: 5 },
+      { title: '문장 2', hello: '츈츈~ (띄어쓰기도 잊지 마!)', count: 5 },
+      { title: '문장 3', hello: '춘춘춘!! (마지막 판이야!)', count: 5 },
+    ],
+  },
 ];
 
 // 입력기에 따라 합쳐질 수 있는 짝. 자리 연습에서는 나란히 두지 않는다.
@@ -194,8 +221,8 @@ export function stageTitle(i) {
 // 한 단계에서 치는 모든 키 (가상 키보드에서 또렷하게 보일 키). 낱말은 키 순서로 풀고 스페이스 포함
 export function stageChars(stage) {
   const set = new Set();
-  if (stage.type === 'words') {
-    for (const w of Object.keys(stage.words)) for (const k of toKeys(w)) set.add(k);
+  if (stage.type === 'words' || stage.type === 'sentences') {
+    for (const w of stageItems(stage)) for (const k of toKeys(w)) set.add(k);
     set.add(' ');
   } else if (stage.type === 'game') {
     // 게임은 열린 낱말 단계의 낱말을 쓰므로 여기서는 비워 둔다
@@ -211,9 +238,14 @@ export function stagePreview(stage) {
   return stage.type === 'words' ? Object.keys(stage.words).slice(0, 4).join(' ') : stage.keys.join(' ');
 }
 
-// 낱말 단계를 시작할 때 한 번 섞고, 판마다 count개씩 차례로 쓴다 (모자라면 처음부터 다시)
-export function shuffleWords(stage, rand = Math.random) {
-  const list = Object.keys(stage.words);
+// 낱말·문장 단계의 연습 글 목록
+export function stageItems(stage) {
+  return stage.type === 'sentences' ? stage.sentences : Object.keys(stage.words);
+}
+
+// 낱말·문장 단계를 시작할 때 한 번 섞고, 판마다 count개씩 차례로 쓴다 (모자라면 처음부터 다시)
+export function shuffleItems(stage, rand = Math.random) {
+  const list = [...stageItems(stage)];
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [list[i], list[j]] = [list[j], list[i]];
@@ -221,7 +253,7 @@ export function shuffleWords(stage, rand = Math.random) {
   return list;
 }
 
-export function wordsForRound(order, stage, roundIdx) {
+export function itemsForRound(order, stage, roundIdx) {
   const before = stage.rounds.slice(0, roundIdx).reduce((n, r) => n + r.count, 0);
   const { count } = stage.rounds[roundIdx];
   return Array.from({ length: count }, (_, i) => order[(before + i) % order.length]);
