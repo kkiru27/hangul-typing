@@ -1,4 +1,4 @@
-# 올리기 전에 실행: python3 tools/release.py "4차 (2026-09-27) · 설명"
+# 올리기 전에 실행: python3 tools/release.py "4차 (2026-09-27) · 설명"   (버전만 떼기: --strip)
 # 1) js/version.js의 버전 글자를 바꾸고
 # 2) HTML·JS 안의 내부 파일 주소(js/, css/, img/, ./*.js)에 ?v=빌드번호를 붙인다.
 # 사파리는 파일마다 따로 캐시해서 옛 파일과 새 파일이 섞일 수 있다. 주소가 바뀌면 새로 받는다.
@@ -8,6 +8,16 @@ import sys
 import time
 
 root = pathlib.Path(__file__).resolve().parent.parent
+
+if sys.argv[1:] == ['--strip']:
+    # 파일 주소의 ?v=빌드번호를 뗀다 (코드를 고칠 때 비교하기 쉽게). 올리기 전에 다시 release.py "버전"으로 붙인다.
+    for path in list(root.glob('*.html')) + list((root / 'js').glob('*.js')):
+        s = path.read_text(encoding='utf-8')
+        t = re.sub(r'\?v=\d+', '', s)
+        if t != s:
+            path.write_text(t, encoding='utf-8')
+    sys.exit(0)
+
 label = sys.argv[1]
 build = time.strftime('%Y%m%d%H%M')
 

@@ -177,14 +177,16 @@ check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지
 await page.goto(`${BASE}/index.html?all`);
 resetIme();
 check(await page.locator('.stage-card.locked').count() === 0, '?all → 모든 단계 열림');
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '8', '모두 열리면 마지막 단계(9단계)가 골라져 있음');
-check(await page.locator('.stage-card').count() === 3, '2쪽에는 3단계');
-await page.keyboard.press('ArrowUp');   // 9단계 → 6단계 (1쪽)
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '5', '위 방향키로 앞 쪽으로 넘어감');
-await page.keyboard.press('ArrowDown'); // 6단계 → 9단계
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '9', '모두 열리면 마지막 단계(9단계)가 골라져 있음');
+check(await page.locator('.stage-card').count() === 4, '2쪽에는 4개');
+await page.keyboard.press('ArrowUp');   // 9 → 6
+await page.keyboard.press('ArrowUp');   // 6 → 3 (1쪽)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '3' && await page.locator('.stage-card').count() === 6, '위 방향키로 앞 쪽으로 넘어감');
+await page.keyboard.press('ArrowDown'); // 3 → 6
+await page.keyboard.press('ArrowDown'); // 6 → 9
 await page.keyboard.press('ArrowLeft');
-await page.keyboard.press('ArrowLeft'); // 9단계 → 7단계(Shift)
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '6', '방향키로 7단계(Shift) 고르기');
+await page.keyboard.press('ArrowLeft'); // 9 → 7(Shift)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '7', '방향키로 7단계(Shift) 고르기');
 await page.keyboard.press('Enter');
 const t5 = await page.locator('#tiles .tile').allInnerTexts();
 check(t5[0] === 'ㄲ', `5단계 첫 글자 ㄲ (${t5[0]})`);
@@ -224,6 +226,65 @@ check((await page.locator('#judgeStats').innerText()).includes('완료'), '테�
 check((await page.locator('#checks').innerText()).includes('compositionstart'), '테스트 페이지: composition 감지');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/09-test-page.png`, fullPage: true });
+
+// ── 게임: 고구마 비 ──
+await page.goto(`${BASE}/index.html?all`);
+resetIme();
+await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowLeft'); // 9 → 6 → 3 → 게임
+check((await text('#homeChunsik .cs-bubble')).includes('고구마 비'), '게임 카드 고르기');
+await page.keyboard.press('Enter');
+check(await page.locator('#gameScreen').isVisible(), '게임 화면');
+await page.waitForTimeout(900);
+check(await page.locator('.drop').count() >= 1, '고구마가 떨어지기 시작');
+const cs = await page.locator('#gameChunsik').boundingBox();
+const field = await page.locator('#rain').boundingBox();
+check(cs.y + cs.height > field.y + field.height - 40, '게임 춘식이는 땅 위(아래쪽)에');
+const g1 = await text('.drop.focus .drop-word');
+for (const k of toKeys(g1)) await press(k);
+await press(' ');
+await page.waitForTimeout(100);
+check((await text('#progress')) === '1/12', `낱말(${g1}) + 스페이스 → 고구마 잡음`);
+check((await page.locator('#gameChunsik').getAttribute('data-pose')) === 'goguma', '잡으면 고구마 먹는 춘식이');
+await press('ㅋ'); await press(' ');
+check((await text('#gameChunsik .cs-bubble')).includes('없어'), '없는 낱말 → 춘식이 안내');
+await page.waitForTimeout(4500);
+const g2 = await text('.drop.focus .drop-word');
+for (const k of toKeys(g2)) await press(k);
+await commit();
+await page.keyboard.press('Enter');
+await page.waitForTimeout(150);
+check((await text('#progress')) === '2/12', `Enter로도 잡음 (${g2})`);
+const live = page.locator('.drop:not(.caught):not(.missed)').first();
+await live.waitFor({ timeout: 10000 }); // 경고 중에는 새 고구마도 안 나오므로, 고구마가 있을 때 시험
+await page.keyboard.type('a');
+check(await page.locator('#gameBanner').isVisible(), '게임 중 영어 경고');
+const yBefore = await live.evaluate((el) => el.style.transform);
+await page.waitForTimeout(600);
+const yAfter = await live.evaluate((el) => el.style.transform);
+check(yBefore === yAfter, '경고 중에는 고구마가 멈춤');
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/14-game.png` });
+resetIme();
+await press('ㅁ'); await press('Backspace');
+check(!(await page.locator('#gameBanner').isVisible()), '한글 치면 경고 사라지고 다시 움직임');
+await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+check(await page.locator('#homeScreen').isVisible() && await page.locator('.drop').count() === 0, 'Esc 두 번 → 게임 끝내고 단계 지도');
+
+// 게임 끝까지: 시계를 빨리 돌려 모두 놓치기 → 결과
+const page2 = await browser.newPage({ viewport: { width: W, height: H } });
+page2.on('pageerror', (e) => errors.push(String(e)));
+await page2.clock.install();
+await page2.goto(`${BASE}/index.html?all`);
+await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowUp'); await page2.keyboard.press('ArrowLeft');
+await page2.keyboard.press('Enter');
+await page2.clock.runFor(100000);
+await page2.clock.runFor(2000);
+check(await page2.locator('#resultScreen').isVisible(), '게임 끝 → 결과 화면');
+check((await page2.locator('#resultAcc').innerText()) === '0 / 12' && (await page2.locator('#resultAccLabel').innerText()) === '잡은 고구마', '결과: 잡은 고구마 0 / 12');
+check((await page2.locator('#resultNote').innerText()).includes('70%'), '못 잡으면 안내');
+await page2.waitForTimeout(800);
+await page2.screenshot({ path: `${OUT}/15-game-result.png` });
+await page2.close();
 
 check(errors.length === 0, `콘솔 오류 없음 ${errors.join(' / ')}`);
 await browser.close();

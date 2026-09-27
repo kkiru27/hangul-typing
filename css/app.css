@@ -93,6 +93,7 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .map-pages span.on { background: var(--accent); }
 .sc-group { position: absolute; right: 10px; bottom: 8px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #eef6ff; color: var(--index); }
 .sc-group.words { background: #e9f7ef; color: var(--ok); }
+.sc-group.game { background: var(--thumb-soft); color: var(--thumb); }
 .stage-card.locked .sc-group { background: #ece6de; color: #b3a59b; }
 .map-tip { margin: 2px 0 0; min-height: 20px; max-width: 580px; text-align: center; font-size: 15px; color: var(--muted); }
 .press-enter { margin: 14px 0 0; font-size: 22px; font-weight: 700; }
@@ -195,6 +196,31 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .tb-hint { position: absolute; left: 54px; font-size: 18px; color: #c3b6ab; pointer-events: none; }
 .tb-hint[hidden] { display: none; }
 
+
+/* 게임: 고구마 비 */
+.game { justify-content: flex-start; gap: 8px; padding: 4px 24px 6px; }
+.rain {
+  position: relative; flex: 1; min-height: 0; width: min(1080px, 100%);
+  border-radius: 22px; border: 2px solid var(--line); overflow: hidden;
+  background: linear-gradient(#e6f3ff, #fff7ec 75%);
+}
+.rain-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: #c79a67; border-top: 4px solid #9a7247; }
+/* 공용 .chunsik.cs-m(position: relative)보다 우선해야 해서 선택자를 길게 */
+.rain .game-chunsik.chunsik { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 2; --cs-h: 84px; }
+.game-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 3; white-space: nowrap; }
+.drop { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; will-change: transform; z-index: 1; }
+.drop .goguma { width: 60px; display: block; }
+.drop-word {
+  position: relative; z-index: 1; margin-bottom: -6px;
+  padding: 2px 10px; border-radius: 12px;
+  background: #fff; border: 2.5px solid var(--line);
+  font-size: 24px; font-weight: 800; white-space: nowrap;
+}
+.drop.focus .drop-word { border-color: var(--index); color: var(--index); box-shadow: 0 0 0 4px rgba(62, 155, 233, .2); }
+.drop.caught { transition: opacity .45s, scale .45s; opacity: 0; scale: .3; }
+.drop.missed { opacity: .35; filter: grayscale(1); transition: opacity .6s; }
+.typed-bar.bad { border-color: #f3a3a6; }
+.typed-bar.shake { animation: shake-x .35s; }
 
 /* 결과 */
 .result-card {

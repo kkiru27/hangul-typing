@@ -7,11 +7,12 @@
 //   'keys'   자리 연습: 자모·숫자·문장부호를 하나씩 친다
 //            한 판(round): intro(정해진 순서) + 나머지는 pool에서 무작위, 모두 length개
 //   'words'  낱말 연습: 낱말을 치고 스페이스바로 다음 낱말. 한 판에 count개
+//   'game'   게임(고구마 비). optional: 깨지 않아도 다음 단계가 열린다. 단계 번호 대신 '게임'
 //   (다음) 'sentences' 짧은 글, 'long' 긴 글
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js?v=202609270855';
+import { toKeys } from './hangul.js?v=202609270905';
 
 // 낱말 → 그림 (그림이 없으면 빈칸)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말
@@ -64,6 +65,16 @@ export const STAGES = [
       { title: '낱말 두 번째', hello: '츈츈~ (스페이스바는 엄지로!)', count: 8 },
       { title: '낱말 세 번째', hello: '춘춘춘!! (거의 다 왔어!)', count: 8 },
     ],
+  },
+  {
+    id: 'game-rain',
+    group: '게임',
+    name: '고구마 비',
+    type: 'game',
+    optional: true,
+    preview: '🍠 떨어지는 낱말 잡기',
+    tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요.',
+    total: 12,
   },
   {
     id: 'keys-top-left',
@@ -170,8 +181,10 @@ export function hasRiskyPair(items) {
   return false;
 }
 
+// 단계 번호: 게임은 번호 없이 '게임', 나머지는 게임을 빼고 센다
 export function stageNum(i) {
-  return `${i + 1}단계`;
+  if (STAGES[i].type === 'game') return '게임';
+  return `${STAGES.slice(0, i + 1).filter((s) => s.type !== 'game').length}단계`;
 }
 
 export function stageTitle(i) {
@@ -184,6 +197,8 @@ export function stageChars(stage) {
   if (stage.type === 'words') {
     for (const w of Object.keys(stage.words)) for (const k of toKeys(w)) set.add(k);
     set.add(' ');
+  } else if (stage.type === 'game') {
+    // 게임은 열린 낱말 단계의 낱말을 쓰므로 여기서는 비워 둔다
   } else {
     for (const r of stage.rounds) for (const ch of (r.intro + r.pool).replace(/\s/g, '')) set.add(ch);
   }
@@ -192,6 +207,7 @@ export function stageChars(stage) {
 
 // 단계 카드에 보일 미리보기
 export function stagePreview(stage) {
+  if (stage.preview) return stage.preview;
   return stage.type === 'words' ? Object.keys(stage.words).slice(0, 4).join(' ') : stage.keys.join(' ');
 }
 

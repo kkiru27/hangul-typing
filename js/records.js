@@ -41,10 +41,14 @@ export function saveStageResult(records, stageId, acc) {
 }
 
 // 1단계는 늘 열려 있고, 나머지는 앞 단계에서 고구마를 1개라도 받으면 열린다.
+// 앞 단계가 게임처럼 optional이면 건너뛰고 그 앞 단계를 본다 (게임을 안 해도 진행 가능).
 // 이미 고구마를 받은 단계도 열려 있다 (단계 순서를 바꿔도 깬 단계가 다시 잠기지 않게).
 export function isUnlocked(stages, records, i, all = false) {
   const cleared = (id) => (records[id]?.goguma ?? 0) > 0;
-  return all || i === 0 || cleared(stages[i - 1]?.id) || cleared(stages[i]?.id);
+  if (all || i === 0 || cleared(stages[i]?.id)) return true;
+  let j = i - 1;
+  while (j > 0 && stages[j].optional) j--;
+  return cleared(stages[j]?.id);
 }
 
 export function totalGoguma(stages, records) {

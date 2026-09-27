@@ -1,6 +1,6 @@
 // 두 손 그림: 써야 할 손가락을 밝게 표시한다.
 
-import { fingerTone } from './layout.js?v=202609270855';
+import { fingerTone } from './layout.js?v=202609270905';
 
 // 왼손 기준 모양 (오른손은 좌우 반전). 손가락 번호 5=새끼 … 2=검지, 1=엄지
 const FINGERS = [

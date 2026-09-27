@@ -132,7 +132,9 @@ test('모든 단계 데이터: 판 길이, 쓰는 글자, 합쳐질 수 있는 �
   for (const stage of STAGES) {
     assert.ok(!ids.has(stage.id), `id 중복 ${stage.id}`);
     ids.add(stage.id);
-    assert.ok(stage.name && stage.group && stage.tip && stage.rounds.length, stage.id);
+    assert.ok(stage.name && stage.group && stage.tip, stage.id);
+    if (stage.type === 'game') { assert.ok(stage.optional && stage.total > 0, stage.id); continue; }
+    assert.ok(stage.rounds.length, stage.id);
     for (const ch of stageChars(stage)) assert.ok(keyFor(ch), `${stage.id}: ${ch} 키 없음`);
     if (stage.type !== 'keys') continue;
     for (const k of stage.keys) assert.ok(stageChars(stage).includes(k), `${stage.id}: ${k}를 연습하지 않음`);
@@ -151,10 +153,21 @@ test('모든 단계 데이터: 판 길이, 쓰는 글자, 합쳐질 수 있는 �
   }
 });
 
-test('단계 순서와 제목', () => {
+test('단계 순서와 제목 (게임은 번호 없이)', () => {
   assert.equal(stageTitle(0), '1단계 · 기본자리');
   assert.equal(STAGES[1].type, 'words');
   assert.equal(stageTitle(1), '2단계 · 기본자리 낱말');
+  assert.equal(stageTitle(2), '게임 · 고구마 비');
+  assert.equal(stageTitle(3), '3단계 · 왼손 윗줄');
+  assert.equal(stageTitle(STAGES.length - 1), '9단계 · 숫자·부호');
+});
+
+test('게임은 깨지 않아도 다음 단계가 열림', () => {
+  const game = STAGES.findIndex((s) => s.type === 'game');
+  const rec = { [STAGES[game - 1].id]: { goguma: 1 } };
+  assert.equal(isUnlocked(STAGES, rec, game), true);     // 게임 열림
+  assert.equal(isUnlocked(STAGES, rec, game + 1), true); // 게임 다음 단계도 열림
+  assert.equal(isUnlocked(STAGES, {}, game), false);
 });
 
 test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () => {
@@ -164,6 +177,7 @@ test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () =>
       for (const ch of stageChars(stage)) learned.add(ch);
       continue;
     }
+    if (stage.type !== 'words') continue;
     const words = Object.keys(stage.words);
     assert.ok(words.length >= 20, `${stage.id}: 낱말이 너무 적음`);
     for (const w of words) {
@@ -231,9 +245,9 @@ test('고구마와 단계 열림', () => {
   assert.equal(rec[STAGES[0].id].plays, 3);
   assert.equal(totalGoguma(STAGES, rec), 2);
   // 순서가 바뀌어 앞 단계를 안 깼어도, 이미 깬 단계는 열려 있음
-  const moved = { [STAGES[2].id]: { goguma: 1 } };
-  assert.equal(isUnlocked(STAGES, moved, 2), true);
+  const moved = { [STAGES[3].id]: { goguma: 1 } };
   assert.equal(isUnlocked(STAGES, moved, 3), true);
+  assert.equal(isUnlocked(STAGES, moved, 4), true);
   assert.equal(isUnlocked(STAGES, moved, 1), false);
 });
 

@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>한글 타자 연습</title>
-<link rel="stylesheet" href="css/common.css?v=202609270855">
-<link rel="stylesheet" href="css/app.css?v=202609270855">
-<link rel="stylesheet" href="css/chunsik.css?v=202609270855">
-<link rel="preload" as="image" href="img/chunsik.png?v=202609270855">
-<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270855">
-<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270855">
+<link rel="stylesheet" href="css/common.css?v=202609270905">
+<link rel="stylesheet" href="css/app.css?v=202609270905">
+<link rel="stylesheet" href="css/chunsik.css?v=202609270905">
+<link rel="preload" as="image" href="img/chunsik.png?v=202609270905">
+<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202609270905">
+<link rel="preload" as="image" href="img/chunsik-sad.png?v=202609270905">
 </head>
 <body>
 <!-- 키보드 입력을 받는 숨은 입력칸 (한글 조합은 여기서 일어난다) -->
@@ -25,7 +25,7 @@
         <div class="round-label" id="roundLabel"></div>
         <div class="track" id="track">
           <div class="track-line"><div class="track-fill" id="trackFill"></div></div>
-          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270855" alt="" draggable="false"></div>
+          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202609270905" alt="" draggable="false"></div>
           <div class="track-goal" id="trackGoal"></div>
         </div>
       </div>
@@ -84,13 +84,27 @@
       </div>
     </section>
 
+    <!-- 게임: 고구마 비 -->
+    <section id="gameScreen" class="screen game" hidden>
+      <div class="rain" id="rain">
+        <div class="rain-ground"></div>
+        <div id="gameChunsik" class="game-chunsik"></div>
+        <div id="gameBanner" class="banner game-banner" hidden></div>
+      </div>
+      <div class="typed-bar" id="gameBar">
+        <span class="tb-icon" aria-hidden="true">⌨️</span>
+        <span class="tb-line"><span class="tb-text" id="gameText"></span><span class="tb-caret"></span></span>
+        <span class="tb-hint" id="gameHint">고구마에 적힌 낱말을 치고 스페이스바!</span>
+      </div>
+    </section>
+
     <!-- 판 끝 / 단계 끝 -->
     <section id="resultScreen" class="screen result" hidden>
       <div class="result-row">
       <div id="resultChunsik"></div>
       <div class="result-card">
         <div class="result-title" id="resultTitle"></div>
-        <div class="result-acc"><span>정확도</span><b id="resultAcc"></b></div>
+        <div class="result-acc"><span id="resultAccLabel">정확도</span><b id="resultAcc"></b></div>
         <div class="result-goguma" id="resultGoguma" hidden></div>
         <div class="result-note" id="resultNote" hidden></div>
         <div class="result-rounds" id="resultRounds"></div>
@@ -108,6 +122,6 @@
 
 <div class="rotate-hint">아이패드를 <b>가로</b>로 돌려 주세요</div>
 
-<script type="module" src="js/app.js?v=202609270855"></script>
+<script type="module" src="js/app.js?v=202609270905"></script>
 </body>
 </html>
