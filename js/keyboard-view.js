@@ -1,6 +1,6 @@
 // 화면 아래 가상 키보드 (AULA F65 배열 그대로)
 
-import { ROWS, fingerTone } from './layout.js?v=202609280515';
+import { ROWS, fingerTone } from './layout.js?v=202609280535';
 
 export class KeyboardView {
   constructor(container) {

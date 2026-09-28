@@ -2,18 +2,18 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js?v=202609280515';
-import { InputBridge } from './input-bridge.js?v=202609280515';
-import { KeyboardView } from './keyboard-view.js?v=202609280515';
-import { HandsView } from './hands-view.js?v=202609280515';
-import { STAGES, buildKeysRound, stageChars, stageNum, stageTitle, stagePreview, shuffleItems, itemsForRound } from './lessons.js?v=202609280515';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, WASD, ARROWS } from './layout.js?v=202609280515';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202609280515';
-import { loadRecords, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202609280515';
-import { VERSION } from './version.js?v=202609280515';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609280515';
-import { checkForUpdate } from './update-check.js?v=202609280515';
-import { RainGame } from './game-rain.js?v=202609280515';
+import { Judge } from './judge.js?v=202609280535';
+import { InputBridge } from './input-bridge.js?v=202609280535';
+import { KeyboardView } from './keyboard-view.js?v=202609280535';
+import { HandsView } from './hands-view.js?v=202609280535';
+import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, shuffleItems, itemsForRound } from './lessons.js?v=202609280535';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, WASD, ARROWS } from './layout.js?v=202609280535';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202609280535';
+import { loadRecords, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202609280535';
+import { VERSION } from './version.js?v=202609280535';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609280535';
+import { checkForUpdate } from './update-check.js?v=202609280535';
+import { RainGame } from './game-rain.js?v=202609280535';
 
 const $ = (id) => document.getElementById(id);
 
@@ -31,15 +31,17 @@ const CHEERS = ['춘춘!! (좋아!)', '츈츈춘~! (잘한다!)', '춘! 춘! (�
 const SAD = ['츄... 춘...', '춘... 츈츈...', '츈... 춘...'];
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const IDLE_MS = 7000;
-const ESC_MS = 2000; // Esc 두 번 사이 시간
 const NAV_KEYS = new Set(['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
 const MAP_COLS = 3;
 const MAP_PAGE = 6; // 단계 지도 한 쪽에 보이는 단계 수
 
 const state = {
-  screen: 'home',      // home | play | roundDone | stageDone
+  screen: 'home',      // home | play | game | roundDone | stageDone
+  page: 'menu',        // 처음 화면(home)에서 보이는 곳: menu(갈래 고르기) | practice(단계 지도) | games(게임 목록)
   records: loadRecords(),
+  menuSel: 0,          // 갈래 고르기에서 고른 것 (0 타자 연습, 1 게임)
   sel: 0,              // 단계 지도에서 고른 단계
+  gameSel: 0,          // 게임 목록에서 고른 게임
   stageIdx: 0,
   stage: STAGES[0],
   roundIdx: 0,
@@ -56,7 +58,7 @@ const state = {
   streak: 0,           // 연속으로 맞힌 키 (춘식이 칭찬용)
   input: { raw: '', base: 0, composing: false }, // 입력칸 값 (친 글자 막대용)
   idleTimer: 0,
-  escAt: 0,
+  paused: null,        // 일시정지 중이면 { at: 멈춘 시각, sel: 고른 항목 }
   game: null,          // 고구마 비 게임
   gameNext: null,      // 게임에서 다음에 칠 글자 (Fn+W 안내용)
 };
@@ -65,6 +67,8 @@ const state = {
 
 function show(screen) {
   state.screen = screen;
+  closePause();
+  setNav(screen === 'play' || screen === 'game' ? 'pause' : null);
   $('homeScreen').hidden = screen !== 'home';
   $('playScreen').hidden = screen !== 'play';
   $('gameScreen').hidden = screen !== 'game';
@@ -79,18 +83,48 @@ function show(screen) {
   if (screen !== 'play') setWarn(null);
 }
 
-// ───── 단계 지도 ─────
+// ───── 처음 화면: 갈래 고르기 → 타자 연습(단계 지도) / 게임 목록 ─────
 
-function goHome(sel = state.sel) {
+const MENU = [
+  { page: 'practice', icon: '⌨️', name: '타자 연습', desc: '기본자리부터 긴 글·검정까지' },
+  { page: 'games', icon: '🎮', name: '게임', desc: '연습한 낱말로 놀아요' },
+];
+
+function goHome(page = state.page) {
   clearTimeout(state.idleTimer);
-  state.sel = sel;
+  state.page = page;
   show('home');
-  $('stageLabel').textContent = '';
   $('progress').textContent = '–';
   $('accuracy').textContent = '–';
   keyboard.setFocusSet(null);
   keyboard.setNext(['Enter']);
-  renderMap();
+  renderHome();
+}
+
+function goBack() {
+  if (state.screen === 'home' && state.page !== 'menu') goHome('menu');
+}
+
+function renderHome() {
+  const { page } = state;
+  $('homeScreen').dataset.page = page;
+  $('stageMap').style.setProperty('--cols', page === 'games' ? Math.min(MAP_COLS, GAMES.length) : MAP_COLS);
+  $('stageLabel').textContent = page === 'practice' ? '⌨️ 타자 연습' : page === 'games' ? '🎮 게임' : '';
+  setNav(page === 'menu' ? null : 'back');
+  $('homeHint').innerHTML = page === 'menu'
+    ? '<kbd>← →</kbd> 로 고르고 <kbd>Enter ⏎</kbd>'
+    : '<kbd>← → ↑ ↓</kbd> 고르고 <kbd>Enter ⏎</kbd> 시작 · <kbd>Esc</kbd> 뒤로';
+  if (page === 'practice') renderMap();
+  else if (page === 'games') renderGames();
+  else renderMenu();
+}
+
+// 위쪽 막대 왼쪽 단추: 'back'(처음으로) | 'pause'(멈춤) | null(앱 이름)
+function setNav(kind) {
+  $('brand').hidden = !!kind;
+  $('navBtn').hidden = !kind;
+  $('navBtn').dataset.kind = kind || '';
+  $('navBtn').innerHTML = { pause: '⏸ 멈춤', resume: '▶ 계속하기', back: '← 처음으로' }[kind] + ' <kbd>Esc</kbd>';
 }
 
 function gogumaIcons(n, cls = '') {
@@ -98,43 +132,96 @@ function gogumaIcons(n, cls = '') {
     GOGUMA_SVG.replace('class="goguma"', `class="goguma ${i < n ? 'earned' : 'off'} ${cls}"`)).join('');
 }
 
+// 단계·게임 카드
+function cardHtml(s, i, num, selected, preview = stagePreview(s)) {
+  const rec = state.records[s.id];
+  return `<div class="stage-card ${selected ? 'selected' : ''}" data-idx="${i}">
+      <span class="sc-num">${num}</span>
+      <span class="sc-name">${s.name}</span>
+      <span class="sc-keys">${preview}</span>
+      <span class="sc-goguma">${gogumaIcons(rec?.goguma ?? 0)}</span>
+      <span class="sc-group ${s.type}">${s.group}</span>
+    </div>`;
+}
+
+function renderMenu() {
+  const practice = totalGoguma(STAGES, state.records);
+  const games = totalGoguma(GAMES, state.records);
+  $('mapTotal').innerHTML = `${GOGUMA_SVG} 모은 고구마 ${practice + games} / ${(STAGES.length + GAMES.length) * GOGUMA_MAX}`;
+  const played = STAGES.some((st) => state.records[st.id]);
+  const meta = [
+    `${GOGUMA_SVG} ${practice} / ${STAGES.length * GOGUMA_MAX}${played ? ` · 이어서: ${stageTitle(state.sel)}` : ''}`,
+    `${GOGUMA_SVG} ${games} / ${GAMES.length * GOGUMA_MAX} · ${GAMES.map((g) => g.name).join(' · ')}`,
+  ];
+  $('stageMap').innerHTML = MENU.map((m, i) => `<div class="stage-card menu-card ${i === state.menuSel ? 'selected' : ''}" data-idx="${i}">
+      <span class="mc-icon">${m.icon}</span>
+      <span class="sc-name">${m.name}</span>
+      <span class="sc-keys">${m.desc}</span>
+      <span class="mc-meta">${meta[i]}</span>
+    </div>`).join('');
+  $('mapPages').innerHTML = '';
+  $('mapTip').textContent = state.menuSel === 0
+    ? '처음이면 1단계부터! 자신 있으면 원하는 단계를 골라도 돼요.'
+    : '연습에서 단계를 더 할수록 게임에 나오는 낱말이 늘어나요.';
+  if (!Object.keys(state.records).length) homeCs.say('츈츈! 춘춘춘~ (안녕! 연습할까, 게임할까?)');
+  else homeCs.say(state.menuSel === 0 ? '춘춘? (타자 연습 할까?)' : '춘춘! (게임 하러 갈까?)');
+}
+
 function renderMap() {
   const total = totalGoguma(STAGES, state.records);
   $('mapTotal').innerHTML = `${GOGUMA_SVG} 모은 고구마 ${total} / ${STAGES.length * GOGUMA_MAX}`;
   const page = Math.floor(state.sel / MAP_PAGE);
   const pages = Math.ceil(STAGES.length / MAP_PAGE);
-  $('stageMap').innerHTML = STAGES.map((s, i) => {
-    if (Math.floor(i / MAP_PAGE) !== page) return '';
-    const rec = state.records[s.id];
-    const cls = ['stage-card', i === state.sel ? 'selected' : ''].join(' ');
-    return `<div class="${cls}" data-idx="${i}">
-      <span class="sc-num">${stageNum(i)}</span>
-      <span class="sc-name">${s.name}</span>
-      <span class="sc-keys">${stagePreview(s)}</span>
-      <span class="sc-goguma">${gogumaIcons(rec?.goguma ?? 0)}</span>
-      <span class="sc-group ${s.type}">${s.group}</span>
-    </div>`;
-  }).join('');
+  $('stageMap').innerHTML = STAGES.map((s, i) =>
+    (Math.floor(i / MAP_PAGE) === page ? cardHtml(s, i, stageNum(i), i === state.sel) : '')).join('');
   $('mapPages').innerHTML = pages > 1 ? Array.from({ length: pages }, (_, p) => `<span class="${p === page ? 'on' : ''}"></span>`).join('') : '';
   const s = STAGES[state.sel];
   $('mapTip').textContent = s.tip;
 
   const rec = state.records[s.id];
-  if (!Object.keys(state.records).length) homeCs.say('츈츈! 춘춘춘~ (안녕! 해 보고 싶은 단계를 골라 봐)');
+  if (!STAGES.some((st) => state.records[st.id])) homeCs.say('츈츈! (해 보고 싶은 단계를 골라 봐)');
   else if ((rec?.goguma ?? 0) >= GOGUMA_MAX) homeCs.say(`춘춘! (${s.name}${josa(s.name, '은', '는')} 고구마 다 모았어!)`);
   else homeCs.say(`춘춘? (${s.name} 해 볼까?)`);
 }
 
+// 게임 목록. 떨어지는 낱말은 연습에서 해 본 단계까지 (카드에 어디까지인지 보여 준다)
+function renderGames() {
+  const total = totalGoguma(GAMES, state.records);
+  $('mapTotal').innerHTML = `${GOGUMA_SVG} 게임 고구마 ${total} / ${GAMES.length * GOGUMA_MAX}`;
+  const words = gameWordStages(STAGES, state.records).at(-1);
+  $('stageMap').innerHTML = GAMES.map((g, i) => cardHtml(g, i, `게임 ${i + 1}`, i === state.gameSel, `🍠 낱말: ${words.name}까지`)).join('');
+  $('mapPages').innerHTML = '';
+  const g = GAMES[state.gameSel];
+  $('mapTip').textContent = g.tip;
+  homeCs.say(`춘춘? (${g.name} 해 볼까?)`);
+}
+
 function moveSel(delta) {
-  const next = state.sel + delta;
-  if (next < 0 || next >= STAGES.length) return;
-  state.sel = next;
-  renderMap();
+  const [key, n] = { menu: ['menuSel', MENU.length], practice: ['sel', STAGES.length], games: ['gameSel', GAMES.length] }[state.page];
+  const next = state[key] + delta;
+  if (next < 0 || next >= n) return;
+  state[key] = next;
+  renderHome();
+}
+
+// 카드를 Enter(또는 톡)로 고름
+function chooseHome(i) {
+  if (state.page === 'menu') {
+    state.menuSel = i;
+    goHome(MENU[i].page);
+  } else if (state.page === 'games') startGame(i);
+  else startStage(i);
 }
 
 $('stageMap').addEventListener('click', (e) => {
   const card = e.target.closest('.stage-card');
-  if (card && state.screen === 'home') startStage(Number(card.dataset.idx));
+  if (card && state.screen === 'home') chooseHome(Number(card.dataset.idx));
+});
+$('navBtn').addEventListener('click', () => {
+  const kind = $('navBtn').dataset.kind;
+  if (kind === 'back') goBack();
+  else if (kind === 'pause') pause();
+  else if (kind === 'resume') choosePause('resume');
 });
 
 // ───── 연습 ─────
@@ -143,7 +230,6 @@ function startStage(i) {
   state.stageIdx = i;
   state.sel = i;
   state.stage = STAGES[i];
-  if (state.stage.type === 'game') return startGame();
   state.roundIdx = 0;
   state.results = [];
   const type = state.stage.type;
@@ -165,12 +251,11 @@ function startRound() {
   state.itemIdx = 0;
   state.roundAcc = { correct: 0, mistakes: 0, missByKey: {}, ms: 0 };
   state.streak = 0;
-  state.escAt = 0;
   startItem();
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609280515';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609280535';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -234,7 +319,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609280515';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609280535';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -300,7 +385,7 @@ function showStageResult() {
 // 기록 저장. 단계 지도로 돌아가면 다음에 할 만한 단계(고구마를 받았으면 다음 단계)를 골라 둔다
 function save(acc, cpm = null, goguma = gogumaFor(acc)) {
   const saved = saveStageResult(state.records, state.stage.id, acc, cpm, goguma);
-  state.sel = suggestStage(STAGES, state.records);
+  if (state.stage.type !== 'game') state.sel = suggestStage(STAGES, state.records);
   return saved;
 }
 
@@ -313,10 +398,93 @@ function showNotes(saved, failText) {
   $('resultNote').textContent = notes.join('  ');
 }
 
+// ───── 일시정지: Esc(또는 ⏸ 단추) → 계속하기 / 처음부터 다시 / 나가기 ─────
+
+const PAUSE_ITEMS = [
+  { act: 'resume', label: '▶ 계속하기' },
+  { act: 'restart', label: '🔄 처음부터 다시' },
+  { act: 'exit', label: '🏠 나가기' },
+];
+
+function pause() {
+  if (state.paused || !(state.screen === 'play' || state.screen === 'game')) return;
+  bridge.hold();
+  if (state.screen !== 'play' && state.screen !== 'game') { bridge.release(); return; } // 멈추기 직전에 친 키로 판이 끝났으면 멈추지 않는다
+  state.paused = { at: Date.now(), sel: 0 };
+  clearTimeout(state.idleTimer);
+  stopTestTimer();
+  state.game?.pause();
+  const isGame = state.screen === 'game';
+  $('pauseSub').textContent = isGame ? gameTitle(state.stage) : $('roundLabel').textContent;
+  $('pauseLayer').hidden = false;
+  setNav('resume');
+  keyboard.setNext(['Enter']);
+  hands.setActive([]);
+  renderPause();
+}
+
+function renderPause() {
+  const exitTo = state.stage.type === 'game' ? '게임 고르기' : '단계 고르기';
+  $('pauseMenu').innerHTML = PAUSE_ITEMS.map((it, i) =>
+    `<button type="button" class="pause-item ${i === state.paused.sel ? 'selected' : ''}" data-act="${it.act}">${it.label}${it.act === 'exit' ? ` <small>(${exitTo})</small>` : ''}</button>`).join('');
+}
+
+function movePause(delta) {
+  const next = state.paused.sel + delta;
+  if (next < 0 || next >= PAUSE_ITEMS.length) return;
+  state.paused.sel = next;
+  renderPause();
+}
+
+// 창만 닫는다 (화면이 바뀔 때도 부른다)
+function closePause() {
+  if (!state.paused) return;
+  state.paused = null;
+  $('pauseLayer').hidden = true;
+}
+
+function choosePause(act) {
+  const p = state.paused;
+  if (!p) return;
+  closePause();
+  if (act === 'restart') {
+    if (state.stage.type === 'game') startGame(state.gameSel);
+    else startStage(state.stageIdx);
+    return;
+  }
+  if (act === 'exit') {
+    bridge.rebase();
+    goHome();
+    return;
+  }
+  // 계속하기: 멈춘 시간은 타수·검정 시간에서 뺀다 (입력칸을 풀기 전에: 풀 때 들어온 키로 시계가 새로 시작될 수 있다)
+  const gap = Date.now() - p.at;
+  setNav('pause');
+  if (state.screen === 'play') {
+    const { judge } = state;
+    if (judge.startedAt && !judge.finishedAt) judge.startedAt += gap;
+    if (state.testStart) { state.testStart += gap; runTestTimer(); }
+    resetIdle();
+  } else if (state.screen === 'game' && !state.warn && !document.hidden) {
+    state.game.resume();
+  }
+  bridge.release();
+  if (state.screen === 'play') render();
+  else if (state.screen === 'game') renderGame();
+}
+
+$('pauseMenu').addEventListener('click', (e) => {
+  const item = e.target.closest('.pause-item');
+  if (item) choosePause(item.dataset.act);
+});
+
 // ───── 게임: 고구마 비 ─────
 
-function startGame() {
-  const stage = state.stage;
+function startGame(i) {
+  state.game?.stop(); // 처음부터 다시: 떨어지던 고구마 치우기
+  state.game = null;
+  state.gameSel = i;
+  const stage = state.stage = GAMES[i];
   // 해 본 단계까지의 낱말 단계에서 낱말을 모두 쓴다
   const wordStages = gameWordStages(STAGES, state.records);
   const words = wordStages.flatMap((s) => Object.keys(s.words));
@@ -324,13 +492,12 @@ function startGame() {
   for (const s of wordStages) for (const ch of stageChars(s)) for (const code of codesFor(ch)) focus.add(code);
   keyboard.setFocusSet([...focus]);
 
-  state.escAt = 0;
   bridge.rebase();
   state.input = { raw: '', base: 0, composing: false };
-  $('roundLabel').textContent = stageTitle(state.stageIdx);
-  $('stageLabel').textContent = stageTitle(state.stageIdx);
+  $('roundLabel').textContent = gameTitle(stage);
+  $('stageLabel').textContent = gameTitle(stage);
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609280515';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609280535';
   show('game');
   gameCs.pose('stand');
   gameCs.say('츈츈! (떨어지는 고구마를 잡아 줘!)');
@@ -436,7 +603,7 @@ function showGameResult({ caught, missed, wrong, total }) {
   const acc = caught / total;
   const saved = save(acc);
   show('stageDone');
-  $('resultTitle').textContent = `${stageTitle(state.stageIdx)} 끝! ${cheer(saved.goguma)}`;
+  $('resultTitle').textContent = `${gameTitle(state.stage)} 끝! ${cheer(saved.goguma)}`;
   $('resultAccLabel').textContent = '잡은 고구마';
   $('resultAcc').textContent = `${caught} / ${total}`;
   $('resultGoguma').hidden = false;
@@ -444,7 +611,7 @@ function showGameResult({ caught, missed, wrong, total }) {
   showNotes(saved, '고구마를 70% 넘게 잡으면 고구마를 받아요');
   $('resultRounds').innerHTML = `놓친 고구마 <b>${missed}</b>개 · 없는 낱말 <b>${wrong}</b>번`;
   $('resultMiss').innerHTML = '';
-  $('resultNext').textContent = '단계 고르기';
+  $('resultNext').textContent = '게임 고르기';
   resultChunsik(saved.goguma, '게임 끝!');
   keyboard.setNext(['Enter']);
 }
@@ -526,12 +693,23 @@ document.addEventListener('keydown', (e) => {
   }
   if (NAV_KEYS.has(e.key)) e.preventDefault(); // 커서 이동·포커스 이동 막기
 
+  if (state.paused) {
+    // 일시정지 창: ↑↓로 고르고 Enter, Esc는 계속하기 (멈춘 동안 친 글자는 bridge가 판정에 안 넘긴다)
+    if (e.repeat) return;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') movePause(-1);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') movePause(1);
+    else if (e.key === 'Enter') choosePause(PAUSE_ITEMS[state.paused.sel].act);
+    else if (e.key === 'Escape') choosePause('resume');
+    return;
+  }
+
   if (state.screen === 'home') {
     if (e.key === 'ArrowLeft') moveSel(-1);
     else if (e.key === 'ArrowRight') moveSel(1);
     else if (e.key === 'ArrowUp') moveSel(-MAP_COLS);
     else if (e.key === 'ArrowDown') moveSel(MAP_COLS);
-    else if (e.key === 'Enter' && !e.repeat) startStage(state.sel);
+    else if (e.key === 'Enter' && !e.repeat) chooseHome({ menu: state.menuSel, practice: state.sel, games: state.gameSel }[state.page]);
+    else if (e.key === 'Escape') goBack();
   } else if (state.screen === 'play') {
     resetIdle();
     if (ARROWS.has(e.key) && !state.judge.hasError) {
@@ -540,29 +718,16 @@ document.addEventListener('keydown', (e) => {
       if (WASD.has(next)) setWarn('fnw');
     }
     if (e.key === 'Enter' && state.awaitNext && !e.repeat) finishItem();
-    if (e.key === 'Escape') {
-      // 실수로 누를 수 있어서 두 번 눌러야 나간다
-      if (Date.now() - state.escAt < ESC_MS) goHome(state.stageIdx);
-      else {
-        state.escAt = Date.now();
-        playCs.say('춘? (Esc를 한 번 더 누르면 단계 고르기로 가요)', 'warn');
-      }
-    }
+    if (e.key === 'Escape' && !e.repeat) pause();
   } else if (state.screen === 'game') {
     if (ARROWS.has(e.key) && WASD.has(keyFor(state.gameNext)?.code)) setWarn('fnw');
     if (e.key === 'Enter' && !e.repeat) setTimeout(submitGameWord, 30); // 조합이 확정된 뒤 읽는다
-    if (e.key === 'Escape') {
-      if (Date.now() - state.escAt < ESC_MS) goHome(state.stageIdx);
-      else {
-        state.escAt = Date.now();
-        gameCs.say('춘? (Esc를 한 번 더 누르면 단계 고르기로 가요)', 'warn');
-      }
-    }
+    if (e.key === 'Escape' && !e.repeat) pause();
   } else if (!$('resultScreen').hidden) {
     if (e.key === 'Enter' && !e.repeat) {
       if (state.screen === 'roundDone') { state.roundIdx++; startRound(); }
       else goHome();
-    } else if (e.key === 'Escape') goHome(state.stageIdx);
+    } else if (e.key === 'Escape') goHome();
   }
 
   if (e.code && !keyFor(e.key)) keyboard.flash(e.code, 'press'); // Backspace·Enter 등 눌림 표시
@@ -588,7 +753,7 @@ function checkFocusSoon() {
 document.addEventListener('visibilitychange', () => {
   if (!state.game) return;
   if (document.hidden) state.game.pause();
-  else if (!state.warn) state.game.resume();
+  else if (!state.warn && !state.paused) state.game.resume();
 });
 
 // ───── 그리기 ─────
@@ -617,7 +782,7 @@ function setWarn(kind) {
     playCs.say('');
   }
   // 게임은 경고가 떠 있는 동안 멈춘다 (고구마가 억울하게 떨어지지 않게)
-  if (state.game) kind ? state.game.pause() : state.game.resume();
+  if (state.game) kind || state.paused ? state.game.pause() : state.game.resume();
   if (state.screen === 'play') render();
   if (state.screen === 'game') renderGame();
 }
@@ -753,6 +918,10 @@ function isLineType(type) {
 
 function startTestTimer() {
   state.testStart = Date.now();
+  runTestTimer();
+}
+
+function runTestTimer() {
   stopTestTimer();
   state.testTimer = setInterval(() => {
     if (Date.now() - state.testStart >= state.stage.duration) endTest();
@@ -832,7 +1001,7 @@ function resetIdle() {
   clearTimeout(state.idleTimer);
   state.idleTimer = setTimeout(() => {
     const { judge } = state;
-    if (state.screen !== 'play' || state.warn || !judge || judge.hasError || judge.done) return;
+    if (state.screen !== 'play' || state.paused || state.warn || !judge || judge.hasError || judge.done) return;
     const key = keyFor(judge.nextKey);
     const finger = FINGER_NAMES[FINGER_BY_CODE[key?.code]];
     if (!finger) return;
@@ -883,7 +1052,10 @@ function missText(miss) {
   return '자주 틀린 키: ' + list.slice(0, 4).map(([k, n]) => `<b>${escapeHtml(charName(k))}</b> ${n}번`).join(', ');
 }
 
-$('version').textContent = VERSION;
-// 처음엔 지난번에 하던 단계(고구마를 받았으면 다음 단계)를 골라 둔다
-goHome(suggestStage(STAGES, state.records));
+// 구석에는 'N차 (날짜)'만 (설명까지 쓰면 길어져 아래쪽 안내 글과 겹친다)
+$('version').textContent = VERSION.split(' · ')[0];
+$('version').title = VERSION;
+// 처음엔 갈래 고르기. 단계 지도에는 지난번에 하던 단계(고구마를 받았으면 다음 단계)를 골라 둔다
+state.sel = suggestStage(STAGES, state.records);
+goHome('menu');
 checkForUpdate();

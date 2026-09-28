@@ -7,15 +7,14 @@
 //   'keys'   자리 연습: 자모·숫자·문장부호를 하나씩 친다
 //            한 판(round): intro(정해진 순서) + 나머지는 pool에서 무작위, 모두 length개
 //   'words'  낱말 연습: 낱말을 치고 스페이스바로 다음 낱말. 한 판에 count개
-//   'game'   게임(고구마 비). 단계 번호 대신 '게임'
 //   'sentences' 짧은 글: 문장을 끝까지 치고 Enter(또는 스페이스바)로 다음 문장. 모든 문장은 문장부호로 끝난다
 //   'long'      긴 글: 이야기를 줄마다 차례로 (짧은 글과 같게 Enter로 다음 줄)
 //   'test'      타자 검정: 정해진 시간(duration) 동안 짧은 글을 치고 타수·정확도를 잰다
-// label이 있는 단계(게임, 검정)는 단계 번호 대신 label을 쓰고 번호 셀 때 빠진다.
+// label이 있는 단계(검정)는 단계 번호 대신 label을 쓰고 번호 셀 때 빠진다. 게임은 따로 GAMES에 있다.
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js?v=202609280515';
+import { toKeys } from './hangul.js?v=202609280535';
 
 // 낱말 → 그림 (그림이 없으면 빈칸)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말
@@ -99,16 +98,6 @@ export const STAGES = [
       { title: '낱말 두 번째', hello: '츈츈~ (스페이스바는 엄지로!)', count: 8 },
       { title: '낱말 세 번째', hello: '춘춘춘!! (거의 다 왔어!)', count: 8 },
     ],
-  },
-  {
-    id: 'game-rain',
-    group: '게임',
-    name: '고구마 비',
-    type: 'game',
-    label: '게임',
-    preview: '🍠 떨어지는 낱말 잡기',
-    tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요.',
-    total: 12,
   },
   {
     id: 'keys-top-left',
@@ -243,6 +232,19 @@ export const STAGES = [
   },
 ];
 
+// 게임: 연습으로 실력을 키운 뒤 노는 곳 (처음 화면에서 '게임'을 고르면 나오는 목록). 기록은 단계와 같이 id로 저장
+export const GAMES = [
+  {
+    id: 'game-rain',
+    group: '게임',
+    name: '고구마 비',
+    type: 'game',
+    preview: '🍠 떨어지는 낱말 잡기',
+    tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요.',
+    total: 12,
+  },
+];
+
 // 입력기에 따라 합쳐질 수 있는 짝. 자리 연습에서는 나란히 두지 않는다.
 //  - 모음: ㅏ+ㅣ→ㅐ 처럼 묶는 입력기가 있다
 //  - 같은 자음 두 번: ㄱ+ㄱ→ㄲ 처럼 묶는 입력기가 있다
@@ -255,7 +257,7 @@ export function hasRiskyPair(items) {
   return false;
 }
 
-// 단계 번호: label이 있는 단계(게임·검정)는 label, 나머지는 label 없는 단계만 센다
+// 단계 번호: label이 있는 단계(검정)는 label, 나머지는 label 없는 단계만 센다
 export function stageNum(i) {
   if (STAGES[i].label) return STAGES[i].label;
   return `${STAGES.slice(0, i + 1).filter((s) => !s.label).length}단계`;
@@ -265,15 +267,17 @@ export function stageTitle(i) {
   return `${stageNum(i)} · ${STAGES[i].name}`;
 }
 
+export function gameTitle(game) {
+  return `게임 · ${game.name}`;
+}
+
 // 한 단계에서 치는 모든 키 (가상 키보드에서 또렷하게 보일 키). 낱말은 키 순서로 풀고 스페이스 포함
 export function stageChars(stage) {
   const set = new Set();
   if (['words', 'sentences', 'long', 'test'].includes(stage.type)) {
     for (const w of stageItems(stage)) for (const k of toKeys(w)) set.add(k);
     set.add(' ');
-  } else if (stage.type === 'game') {
-    // 게임은 해 본 단계까지의 낱말 단계에서 낱말을 가져오므로(records.js gameWordStages) 여기서는 비워 둔다
-  } else {
+  } else if (stage.type === 'keys') {
     for (const r of stage.rounds) for (const ch of (r.intro + r.pool).replace(/\s/g, '')) set.add(ch);
   }
   return [...set];

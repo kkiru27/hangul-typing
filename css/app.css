@@ -20,6 +20,17 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   padding: 10px 20px;
 }
 .brand { font-weight: 800; font-size: 18px; color: var(--accent); }
+.brand[hidden], .nav-btn[hidden] { display: none; }
+/* 위쪽 막대 왼쪽 단추: 처음으로 / 멈춤 (톡 눌러도 되고 Esc로도 된다) */
+.nav-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px 5px 14px;
+  border: 2px solid var(--line); border-radius: 999px;
+  background: var(--card); color: var(--ink);
+  font-size: 16px; font-weight: 800; white-space: nowrap;
+  cursor: pointer;
+}
+.nav-btn kbd { font-size: 12px; padding: 1px 6px; color: var(--muted); }
 .top-center { display: flex; justify-content: center; min-width: 0; }
 .stage-label { font-weight: 700; font-size: 18px; }
 .stage-label[hidden] { display: none; }
@@ -68,7 +79,7 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .map-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .map-total { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 800; color: var(--muted); }
 .map-total .goguma { width: 30px; }
-.stage-map { display: grid; grid-template-columns: repeat(3, 184px); gap: 10px; }
+.stage-map { display: grid; grid-template-columns: repeat(var(--cols, 3), 184px); gap: 10px; }
 .stage-card {
   position: relative;
   display: flex; flex-direction: column; gap: 1px;
@@ -87,6 +98,15 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .sc-goguma { display: flex; gap: 4px; margin-top: 3px; }
 .sc-goguma .goguma { width: 28px; }
 .goguma.off { filter: grayscale(1); opacity: .28; }
+/* 처음 화면 갈래 고르기: 큰 카드 두 장 */
+.stage-card.menu-card { width: 280px; min-height: 176px; padding: 12px 18px; gap: 4px; align-items: flex-start; }
+.mc-icon { font-size: 40px; line-height: 1.1; }
+.menu-card .sc-name { font-size: 24px; }
+.menu-card .sc-keys { font-size: 15px; letter-spacing: 0; }
+.mc-meta { display: flex; align-items: center; gap: 4px; margin-top: auto; font-size: 14px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.mc-meta .goguma { width: 24px; }
+#homeScreen[data-page="menu"] .stage-map { grid-template-columns: repeat(2, 280px); gap: 16px; }
+#homeScreen[data-page="games"] .stage-map { grid-template-columns: repeat(var(--cols, 3), 240px); }
 .map-pages { display: flex; gap: 8px; min-height: 10px; }
 .map-pages span { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
 .map-pages span.on { background: var(--accent); }
@@ -98,6 +118,37 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .press-enter kbd { font-size: 20px; border-color: var(--index); color: var(--index); }
 .corner { position: absolute; right: 18px; bottom: 2px; font-size: 12px; color: #c3b6ab; }
 .corner a { color: var(--muted); }
+
+/* 일시정지 창: 가운데 영역만 덮는다 (아래 키보드는 보이게) */
+.pause-layer {
+  position: absolute; inset: 0; z-index: 20;
+  display: grid; place-items: center;
+  background: rgba(255, 247, 236, .88);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.pause-layer[hidden] { display: none; }
+.pause-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 12px 32px;
+  background: var(--card); border: 2.5px solid var(--line); border-radius: 24px;
+  box-shadow: 0 14px 40px rgba(120, 80, 0, .15);
+}
+.pause-head { display: flex; align-items: center; gap: 12px; }
+.pause-cs { width: 52px; height: auto; }
+.pause-title { font-size: 26px; font-weight: 800; }
+.pause-sub { font-size: 15px; font-weight: 700; color: var(--muted); }
+.pause-menu { display: flex; flex-direction: column; gap: 8px; width: 300px; }
+.pause-item {
+  padding: 9px 16px;
+  border: 2.5px solid var(--line); border-radius: 16px;
+  background: var(--card); color: var(--ink);
+  font-size: 20px; font-weight: 800; text-align: left;
+  cursor: pointer;
+}
+.pause-item small { font-size: 14px; color: var(--muted); font-weight: 700; }
+.pause-item.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 122, 89, .22); }
+.pause-hint { margin: 4px 0 0; font-size: 16px; font-weight: 700; color: var(--muted); }
+.pause-hint kbd { font-size: 14px; }
 
 /* 연습 화면 */
 .play { gap: 10px; justify-content: space-evenly; }
@@ -305,6 +356,13 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   .sc-name { font-size: 17px; }
   .sc-goguma .goguma { width: 22px; }
   .map-tip { display: none; }
+  .press-enter { margin-top: 8px; font-size: 18px; }
+  .press-enter kbd { font-size: 16px; }
+  .pause-card { padding: 8px 28px; gap: 6px; }
+  .pause-cs { width: 40px; }
+  .pause-title { font-size: 22px; }
+  .pause-item { padding: 5px 14px; font-size: 18px; }
+  .pause-menu { gap: 6px; }
   .result-card { padding: 14px 32px; }
   .result-title { font-size: 26px; }
   .result-acc b { font-size: 44px; }

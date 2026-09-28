@@ -44,6 +44,19 @@ async function commit() {
 }
 
 const text = (sel) => page.locator(sel).innerText();
+const IDX = (id) => STAGES.findIndex((s) => s.id === id);
+const pageOf = (p) => p.locator('#homeScreen').getAttribute('data-page');
+// 처음 화면(갈래 고르기)에서 '타자 연습'(0)이나 '게임'(1)으로 들어간다
+async function openPage(p, which) {
+  if (which === 1) await p.keyboard.press('ArrowRight');
+  await p.keyboard.press('Enter');
+}
+// 일시정지 창(Esc)에서 ↓ ↓ Enter = 나가기
+async function exitViaPause(p) {
+  await p.keyboard.press('Escape');
+  await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown');
+  await p.keyboard.press('Enter');
+}
 // 단계 지도에서 방향키(← →)로 idx번째 단계를 고른다
 async function selectStage(p, idx) {
   for (let n = 0; n < STAGES.length; n++) {
@@ -57,16 +70,39 @@ const check = (cond, msg) => { console.log(`${cond ? '✔' : '✘'} ${msg}`); if
 // ── 연습 앱 ──
 await page.goto(`${BASE}/index.html`);
 check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete && el.naturalWidth > 0), '처음 화면 춘식이 이미지 로드');
+check(await pageOf(page) === 'menu' && await page.locator('.menu-card').count() === 2, '처음 화면: 타자 연습 / 게임 두 갈래');
+check((await text('.menu-card.selected')).includes('타자 연습') && (await text('#homeChunsik .cs-bubble')).includes('게임할까'), '처음엔 타자 연습이 골라져 있고 춘식이가 물어봄');
+check(await page.locator('#navBtn').isHidden() && await page.locator('#brand').isVisible(), '처음 화면: 왼쪽 위는 앱 이름');
+await page.waitForTimeout(400);
+await page.screenshot({ path: `${OUT}/00-menu.png` });
+await page.keyboard.press('Enter');
+check(await pageOf(page) === 'practice' && (await text('#stageLabel')).includes('타자 연습'), 'Enter → 타자 연습(단계 지도)');
+check(await page.locator('#navBtn').isVisible() && (await text('#navBtn')).includes('처음으로'), '단계 지도: 왼쪽 위에 "처음으로" 단추');
 check(await page.locator('.stage-card').count() === 6, '단계 지도 한 쪽에 6단계');
-check(await page.locator('#mapPages span').count() === 3, '단계 지도 3쪽');
+check(await page.locator('#mapPages span').count() === 2, '단계 지도 2쪽 (게임은 따로)');
+check(!(await text('#stageMap')).includes('고구마 비'), '단계 지도에 게임 없음');
+await page.keyboard.press('Escape');
+check(await pageOf(page) === 'menu', 'Esc → 처음 화면');
+await page.keyboard.press('Enter');
+await page.locator('#navBtn').click();
+check(await pageOf(page) === 'menu', '"처음으로" 단추를 눌러도 처음 화면');
+await page.keyboard.press('Enter');
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '0', '처음엔 1단계가 골라져 있음');
 check(await page.locator('.stage-card.locked').count() === 0 && !(await text('#stageMap')).includes('🔒'), '처음부터 잠긴 단계 없음');
 check((await text('#homeChunsik .cs-bubble')).includes('골라'), '처음: 춘식이가 단계를 고르라고 안내');
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('Enter');
 check(await page.locator('#playScreen').isVisible() && (await text('#roundLabel')).startsWith('2단계'), '1단계를 안 해도 2단계 바로 시작');
-await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
-check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지도');
+check((await text('#navBtn')).includes('멈춤'), '연습 중: 왼쪽 위에 ⏸ 멈춤 단추');
+await page.keyboard.press('Escape');
+check(await page.locator('#pauseLayer').isVisible() && (await text('.pause-item.selected')).includes('계속하기'), 'Esc → 일시정지 창 (계속하기가 골라져 있음)');
+check((await text('#navBtn')).includes('계속하기') && (await text('#pauseSub')).startsWith('2단계'), '멈춘 동안: 왼쪽 위는 "계속하기", 창에 단계 이름');
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/20-pause.png` });
+await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+check((await text('.pause-item.selected')).includes('나가기'), '↓ 두 번 → 나가기');
+await page.keyboard.press('Enter');
+check(await pageOf(page) === 'practice' && await page.locator('#pauseLayer').isHidden(), '나가기 → 단계 지도');
 await page.keyboard.press('ArrowLeft');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/01-home.png` });
@@ -146,11 +182,13 @@ await page.screenshot({ path: `${OUT}/08-stage-result.png` });
 // 단계 지도로 돌아가면 2단계가 골라져 있고 열려 있음
 await page.keyboard.press('Enter');
 check(await page.locator('#homeScreen').isVisible(), '결과에서 Enter → 단계 지도');
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '다음 단계(2단계)가 골라져 있음');
+check(await pageOf(page) === 'practice' && await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '단계 지도로 돌아오고 다음 단계(2단계)가 골라져 있음');
 check(await page.locator('.stage-card[data-idx="0"] .goguma.earned').count() === 3, '1단계 카드에 고구마 3개');
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/10-map.png` });
 await page.reload();
+check((await text('.menu-card.selected')).includes('이어서: 2단계'), '새로 열면 처음 화면, 타자 연습 카드에 "이어서: 2단계"');
+await openPage(page, 0);
 check(await page.locator('.stage-card[data-idx="0"] .goguma.earned').count() === 3, '새로고침해도 기록 유지(1단계 고구마 3개)');
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '새로 열어도 다음 단계(2단계)가 골라짐');
 
@@ -178,25 +216,34 @@ await press('Backspace');
 for (const k of [...k2, ' ']) await press(k);
 check((await text('#progress')) === '2/8', `두 번째 낱말(${w2}) 끝`);
 check(!(await text('#accuracy')).startsWith('100'), '낱말 판 정확도에 실수 반영');
+// 일시정지: 멈춘 동안 친 글자는 세지 않고, 계속하면 그대로 이어서
+const accBefore = await text('#accuracy');
+await page.locator('#navBtn').click();
+check(await page.locator('#pauseLayer').isVisible(), '⏸ 단추를 톡 눌러도 일시정지');
+await press('ㅋ'); await commit(); // 멈춘 동안 친 글자
 await page.keyboard.press('Escape');
-check((await text('#playChunsik .cs-bubble')).includes('Esc'), 'Esc 한 번 → 한 번 더 누르라는 안내');
-check(await page.locator('#playScreen').isVisible(), 'Esc 한 번으로는 안 나감');
-await page.keyboard.press('Escape');
-check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지도');
+resetIme();
+check(await page.locator('#pauseLayer').isHidden() && (await text('#progress')) === '2/8', 'Esc → 계속하기, 진행 그대로 (2/8)');
+check((await page.inputValue('#ime')) === '' && (await text('#accuracy')) === accBefore && await page.locator('.wb-chars .error').count() === 0, '멈춘 동안 친 글자는 지워지고 정확도에 안 들어감');
+const w3 = await text('.wq.current');
+for (const k of [...toKeys(w3), ' ']) await press(k);
+check((await text('#progress')) === '3/8', `계속한 뒤 세 번째 낱말(${w3}) 끝`);
+await page.keyboard.press('Escape'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+check((await text('#progress')) === '0/8' && (await text('#roundLabel')).includes('(1/3)'), '처음부터 다시 → 첫 판 0/8');
+await exitViaPause(page);
+check(await pageOf(page) === 'practice', '나가기 → 단계 지도');
 
 // 7단계(Shift): 방향키로 쪽을 넘겨 가며 고르기
 await page.goto(`${BASE}/index.html`);
 resetIme();
+await openPage(page, 0);
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '2단계를 중간에 나가면 기록 없음 → 그대로 2단계');
 for (const k of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown']) await page.keyboard.press(k); // 1 → 4 → 7 → 10 (13은 없음)
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '10', '아래 방향키로 다음 쪽으로 넘어감');
-await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); // 12 (3쪽)
-check(await page.locator('.stage-card').count() === 1 && await page.locator('.stage-card.selected').getAttribute('data-idx') === '12', '3쪽에는 검정 1개');
-for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp']) await page.keyboard.press(k); // 12 → 9 → 6 → 3 (1쪽)
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '3' && await page.locator('.stage-card').count() === 6, '위 방향키로 앞 쪽으로 넘어감');
-await page.keyboard.press('ArrowDown');  // 3 → 6
-await page.keyboard.press('ArrowRight'); // 6 → 7(Shift)
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '7', '방향키로 7단계(Shift) 고르기');
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '10' && (await text('#stageMap')).includes('검정'), '아래 방향키로 다음 쪽(검정이 있는 쪽)으로 넘어감');
+for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp']) await page.keyboard.press(k); // 10 → 7 → 4 → 1 (1쪽)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1' && (await text('#stageMap')).includes('기본자리'), '위 방향키로 앞 쪽으로 넘어감');
+await selectStage(page, IDX('keys-shift'));
+check((await text('.stage-card.selected')).includes('7단계'), '방향키로 7단계(Shift) 고르기');
 await page.keyboard.press('Enter');
 const t5 = await page.locator('#tiles .tile').allInnerTexts();
 check(t5[0] === 'ㄲ', `5단계 첫 글자 ㄲ (${t5[0]})`);
@@ -212,8 +259,8 @@ for (const k of t5.slice(0, 4)) await press(k);
 check((await text('#progress')) === `4/${t5.length}`, '5단계 Shift 글자 진행');
 
 // 6단계(숫자·문장부호)
-await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
 await commit(); resetIme(); // 같은 페이지: 실제 입력기처럼 조합 중 글자를 확정한 뒤 흉내 상태를 비운다
+await exitViaPause(page);
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('Enter');
@@ -240,6 +287,7 @@ await page.screenshot({ path: `${OUT}/09-test-page.png`, fullPage: true });
 // ── 짧은 글 + 타수 ──
 await page.goto(`${BASE}/index.html`);
 resetIme();
+await openPage(page, 0);
 await selectStage(page, STAGES.findIndex((s) => s.type === 'sentences')); // 10단계 짧은 글
 await page.keyboard.press('Enter');
 check(await page.locator('#sentence').isVisible() && await page.locator('#speedStat').isVisible(), '짧은 글 화면 + 타수 표시');
@@ -267,11 +315,12 @@ await press(' ');
 await page.waitForTimeout(100);
 check((await text('#progress')) === '2/5', '스페이스바로도 다음 문장 (2/5)');
 check((await page.inputValue('#ime')) === '', '다음 문장에서 입력칸 비움');
-await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+await exitViaPause(page);
 
 // ── 긴 글: 이야기 차례대로 ──
 await page.goto(`${BASE}/index.html`);
 resetIme();
+await openPage(page, 0);
 await selectStage(page, STAGES.findIndex((s) => s.type === 'long')); // 11단계 긴 글
 await page.keyboard.press('Enter');
 check(await page.locator('#story').isVisible() && (await text('#roundLabel')).startsWith('11단계'), '긴 글 화면');
@@ -285,7 +334,7 @@ await page.screenshot({ path: `${OUT}/17-story.png` });
 await page.keyboard.press('Enter');
 await page.waitForTimeout(100);
 check((await text('#storyPrev')) === l1 && (await storyNow()).startsWith('어느 날 아침'), 'Enter → 다음 줄, 앞 줄은 위로');
-await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+await exitViaPause(page);
 
 // ── 1분 타자 검정: 시계를 빨리 돌려 끝까지 ──
 const page3 = await browser.newPage({ viewport: { width: W, height: H } });
@@ -293,6 +342,7 @@ page3.on('pageerror', (e) => errors.push(String(e)));
 const cdp3 = await page3.context().newCDPSession(page3);
 await page3.clock.install();
 await page3.goto(`${BASE}/index.html`);
+await openPage(page3, 0);
 await selectStage(page3, STAGES.findIndex((s) => s.type === 'test')); // 처음 온 사람도 검정을 바로 고를 수 있음
 await page3.keyboard.press('Enter');
 check((await page3.locator('#progressLabel').innerText()) === '남은 시간' && (await page3.locator('#progress').innerText()) === '1:00', '검정: 남은 시간 1:00 (치기 전에는 멈춤)');
@@ -301,6 +351,13 @@ check((await page3.locator('#progress').innerText()) === '1:00', '첫 키 전에
 const t3 = await page3.locator('#sentBig > span:not(.sent-enter)').evaluateAll((els) => els.map((el) => (el.classList.contains('sp') ? ' ' : el.textContent)).join(''));
 for (const k of toKeys(t3).slice(0, 6)) { await cdp3.send('Input.insertText', { text: k }); await page3.clock.runFor(1000); }
 check(/^0:5\d$/.test(await page3.locator('#progress').innerText()), `첫 키부터 시간이 감 (${await page3.locator('#progress').innerText()})`);
+const leftBefore = await page3.locator('#progress').innerText();
+await page3.keyboard.press('Escape');
+await page3.clock.runFor(30000);
+check(await page3.locator('#pauseLayer').isVisible() && (await page3.locator('#progress').innerText()) === leftBefore, `검정: 멈춘 동안 시간이 안 감 (${leftBefore})`);
+await page3.keyboard.press('Escape');
+await page3.clock.runFor(1000);
+check((await page3.locator('#progress').innerText()) !== leftBefore && await page3.locator('#playScreen').isVisible(), `계속하면 남은 시간부터 다시 감 (${await page3.locator('#progress').innerText()})`);
 await page3.clock.runFor(60000);
 await page3.clock.runFor(1500);
 check(await page3.locator('#resultScreen').isVisible(), '1분 지나면 결과');
@@ -315,8 +372,14 @@ await page3.close();
 // ── 게임: 고구마 비 ──
 await page.goto(`${BASE}/index.html`);
 resetIme();
-await selectStage(page, STAGES.findIndex((s) => s.type === 'game'));
-check((await text('#homeChunsik .cs-bubble')).includes('고구마 비'), '게임 카드 고르기');
+await page.keyboard.press('ArrowRight');
+check((await text('.menu-card.selected')).includes('게임') && (await text('#homeChunsik .cs-bubble')).includes('게임 하러'), '처음 화면에서 → 로 게임 고르기');
+await page.keyboard.press('Enter');
+check(await pageOf(page) === 'games' && (await text('#stageLabel')).includes('게임'), 'Enter → 게임 목록');
+check(await page.locator('.stage-card').count() === 1 && (await text('.stage-card.selected')).includes('고구마 비'), '게임 목록: 고구마 비');
+check((await text('.stage-card.selected')).includes('기본자리 낱말까지'), '카드에 떨어지는 낱말 범위 (1단계만 했으면 기본자리 낱말까지)');
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/19-games.png` });
 await page.keyboard.press('Enter');
 check(await page.locator('#gameScreen').isVisible(), '게임 화면');
 await page.waitForTimeout(900);
@@ -355,23 +418,38 @@ await page.screenshot({ path: `${OUT}/14-game.png` });
 resetIme();
 await press('ㅁ'); await press('Backspace');
 check(!(await page.locator('#gameBanner').isVisible()), '한글 치면 경고 사라지고 다시 움직임');
-await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
-check(await page.locator('#homeScreen').isVisible() && await page.locator('.drop').count() === 0, 'Esc 두 번 → 게임 끝내고 단계 지도');
+// 게임 일시정지: 고구마가 멈추고, 처음부터 다시 / 나가기
+const live2 = page.locator('.drop:not(.caught):not(.missed)').first();
+await live2.waitFor({ timeout: 10000 });
+await page.keyboard.press('Escape');
+const y1 = await live2.evaluate((el) => el.style.transform);
+await page.waitForTimeout(600);
+check(await page.locator('#pauseLayer').isVisible() && y1 === await live2.evaluate((el) => el.style.transform), '게임 일시정지 → 고구마가 멈춤');
+check((await text('.pause-item[data-act="exit"]')).includes('게임 고르기'), '게임에서 나가기는 게임 고르기로');
+await page.waitForTimeout(200);
+await page.screenshot({ path: `${OUT}/21-game-pause.png` });
+await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+check((await text('#progress')) === '0/12' && await page.locator('#pauseLayer').isHidden() && await page.locator('.drop.caught').count() === 0, '게임 처음부터 다시 → 0/12, 떨어지던 고구마 치움');
+await exitViaPause(page);
+check(await pageOf(page) === 'games' && await page.locator('.drop').count() === 0, '나가기 → 게임 끝내고 게임 목록');
 
 // 게임 끝까지: 시계를 빨리 돌려 모두 놓치기 → 결과
 const page2 = await browser.newPage({ viewport: { width: W, height: H } });
 page2.on('pageerror', (e) => errors.push(String(e)));
 await page2.clock.install();
 await page2.goto(`${BASE}/index.html`);
-await selectStage(page2, STAGES.findIndex((s) => s.type === 'game'));
+await openPage(page2, 1);
 await page2.keyboard.press('Enter');
 await page2.clock.runFor(100000);
 await page2.clock.runFor(2000);
 check(await page2.locator('#resultScreen').isVisible(), '게임 끝 → 결과 화면');
 check((await page2.locator('#resultAcc').innerText()) === '0 / 12' && (await page2.locator('#resultAccLabel').innerText()) === '잡은 고구마', '결과: 잡은 고구마 0 / 12');
 check((await page2.locator('#resultNote').innerText()).includes('70%'), '못 잡으면 안내');
+check((await page2.locator('#resultNext').innerText()) === '게임 고르기', '게임 결과: Enter → 게임 고르기');
 await page2.waitForTimeout(800);
 await page2.screenshot({ path: `${OUT}/15-game-result.png` });
+await page2.keyboard.press('Enter');
+check(await page2.locator('#homeScreen').getAttribute('data-page') === 'games', '게임 결과에서 Enter → 게임 목록');
 await page2.close();
 
 check(errors.length === 0, `콘솔 오류 없음 ${errors.join(' / ')}`);

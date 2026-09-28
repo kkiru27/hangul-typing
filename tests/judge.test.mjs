@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
 import { gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, shuffleItems, itemsForRound } from '../js/lessons.js';
+import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, shuffleItems, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, ROWS } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
@@ -153,12 +153,15 @@ test('모든 단계 데이터: 판 길이, 쓰는 글자, 합쳐질 수 있는 �
   }
 });
 
-test('단계 순서와 제목 (게임은 번호 없이)', () => {
+test('단계 순서와 제목 (게임은 연습 단계와 따로)', () => {
   assert.equal(stageTitle(0), '1단계 · 기본자리');
   assert.equal(STAGES[1].type, 'words');
   assert.equal(stageTitle(1), '2단계 · 기본자리 낱말');
-  assert.equal(stageTitle(2), '게임 · 고구마 비');
-  assert.equal(stageTitle(3), '3단계 · 왼손 윗줄');
+  assert.equal(stageTitle(2), '3단계 · 왼손 윗줄');
+  assert.ok(STAGES.every((s) => s.type !== 'game'), '연습 단계에 게임 없음');
+  assert.ok(GAMES.length && GAMES.every((g) => g.type === 'game' && g.total > 0 && g.name && g.tip), '게임 목록');
+  assert.ok(GAMES.every((g) => !STAGES.some((s) => s.id === g.id)), '게임 id는 단계 id와 겹치지 않음 (기록을 같이 씀)');
+  assert.equal(gameTitle(GAMES[0]), '게임 · 고구마 비');
   const at = (id) => stageTitle(STAGES.findIndex((s) => s.id === id));
   assert.equal(at('keys-number'), '9단계 · 숫자·부호');
   assert.equal(at('sentences-1'), '10단계 · 짧은 글');
