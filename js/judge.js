@@ -6,7 +6,7 @@
 //   · 틀린 뒤 지우기 전에 더 친 키는 한 번만 센다 (초보가 연달아 틀려도 점수가 무너지지 않게)
 //   · 지웠다가 다시 친 키는 두 번 세지 않는다
 
-import { toKeys, toUnits } from './hangul.js?v=202609270917';
+import { toKeys, toUnits } from './hangul.js?v=202609280515';
 
 const LATIN = /^[A-Za-z]$/;
 

@@ -5,6 +5,7 @@
 import { createRequire } from 'node:module';
 import { ImeSim } from './ime-sim.mjs';
 import { toKeys } from '../js/hangul.js';
+import { STAGES } from '../js/lessons.js';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -43,6 +44,14 @@ async function commit() {
 }
 
 const text = (sel) => page.locator(sel).innerText();
+// 단계 지도에서 방향키(← →)로 idx번째 단계를 고른다
+async function selectStage(p, idx) {
+  for (let n = 0; n < STAGES.length; n++) {
+    const cur = Number(await p.locator('.stage-card.selected').getAttribute('data-idx'));
+    if (cur === idx) return;
+    await p.keyboard.press(cur < idx ? 'ArrowRight' : 'ArrowLeft');
+  }
+}
 const check = (cond, msg) => { console.log(`${cond ? '✔' : '✘'} ${msg}`); if (!cond) process.exitCode = 1; };
 
 // ── 연습 앱 ──
@@ -51,11 +60,13 @@ check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete &&
 check(await page.locator('.stage-card').count() === 6, '단계 지도 한 쪽에 6단계');
 check(await page.locator('#mapPages span').count() === 3, '단계 지도 3쪽');
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '0', '처음엔 1단계가 골라져 있음');
-check(await page.locator('.stage-card.locked').count() === 5, '2~6단계는 잠김');
+check(await page.locator('.stage-card.locked').count() === 0 && !(await text('#stageMap')).includes('🔒'), '처음부터 잠긴 단계 없음');
+check((await text('#homeChunsik .cs-bubble')).includes('골라'), '처음: 춘식이가 단계를 고르라고 안내');
 await page.keyboard.press('ArrowRight');
 await page.keyboard.press('Enter');
-check(await page.locator('#homeScreen').isVisible(), '잠긴 단계는 Enter로 시작 안 됨');
-check((await text('#homeChunsik .cs-bubble')).includes('열려'), '잠긴 단계: 춘식이가 안내');
+check(await page.locator('#playScreen').isVisible() && (await text('#roundLabel')).startsWith('2단계'), '1단계를 안 해도 2단계 바로 시작');
+await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지도');
 await page.keyboard.press('ArrowLeft');
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/01-home.png` });
@@ -128,7 +139,7 @@ for (let r = 2; r <= 3; r++) {
 }
 check((await text('#resultTitle')).includes('1단계'), '3판 끝 → 단계 결과');
 check(await page.locator('#resultGoguma .goguma.earned').count() === 3, '정확도 95% 이상 → 고구마 3개');
-check((await text('#resultNote')).includes('2단계가 열렸어요'), '2단계가 열렸다는 안내');
+check(!(await text('.result-card')).includes('열렸'), '"단계가 열렸어요" 안내 없음');
 await page.waitForTimeout(1200);
 await page.screenshot({ path: `${OUT}/08-stage-result.png` });
 
@@ -140,8 +151,8 @@ check(await page.locator('.stage-card[data-idx="0"] .goguma.earned').count() ===
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/10-map.png` });
 await page.reload();
-check(await page.locator('.stage-card[data-idx="1"]').evaluate((el) => !el.classList.contains('locked')), '새로고침해도 기록 유지(2단계 열림)');
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '새로 열어도 가장 뒤 열린 단계가 골라짐');
+check(await page.locator('.stage-card[data-idx="0"] .goguma.earned').count() === 3, '새로고침해도 기록 유지(1단계 고구마 3개)');
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '새로 열어도 다음 단계(2단계)가 골라짐');
 
 // 2단계: 낱말 연습 (낱말 + 스페이스), Esc 두 번으로 나가기
 await page.keyboard.press('Enter');
@@ -173,12 +184,14 @@ check(await page.locator('#playScreen').isVisible(), 'Esc 한 번으로는 안 �
 await page.keyboard.press('Escape');
 check(await page.locator('#homeScreen').isVisible(), 'Esc 두 번 → 단계 지도');
 
-// 5단계(Shift): 모든 단계 열기(?all)로 바로 가기
-await page.goto(`${BASE}/index.html?all`);
+// 7단계(Shift): 방향키로 쪽을 넘겨 가며 고르기
+await page.goto(`${BASE}/index.html`);
 resetIme();
-check(await page.locator('.stage-card.locked').count() === 0, '?all → 모든 단계 열림');
-check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '12', '모두 열리면 마지막 단계(검정)가 골라져 있음');
-check(await page.locator('.stage-card').count() === 1, '3쪽에는 1개');
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '1', '2단계를 중간에 나가면 기록 없음 → 그대로 2단계');
+for (const k of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown']) await page.keyboard.press(k); // 1 → 4 → 7 → 10 (13은 없음)
+check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '10', '아래 방향키로 다음 쪽으로 넘어감');
+await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); // 12 (3쪽)
+check(await page.locator('.stage-card').count() === 1 && await page.locator('.stage-card.selected').getAttribute('data-idx') === '12', '3쪽에는 검정 1개');
 for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp']) await page.keyboard.press(k); // 12 → 9 → 6 → 3 (1쪽)
 check(await page.locator('.stage-card.selected').getAttribute('data-idx') === '3' && await page.locator('.stage-card').count() === 6, '위 방향키로 앞 쪽으로 넘어감');
 await page.keyboard.press('ArrowDown');  // 3 → 6
@@ -225,9 +238,9 @@ await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/09-test-page.png`, fullPage: true });
 
 // ── 짧은 글 + 타수 ──
-await page.goto(`${BASE}/index.html?all`);
+await page.goto(`${BASE}/index.html`);
 resetIme();
-await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); // 검정 → 긴 글 → 10단계 짧은 글
+await selectStage(page, STAGES.findIndex((s) => s.type === 'sentences')); // 10단계 짧은 글
 await page.keyboard.press('Enter');
 check(await page.locator('#sentence').isVisible() && await page.locator('#speedStat').isVisible(), '짧은 글 화면 + 타수 표시');
 const headH = (await page.locator('.topbar').boundingBox()).height;
@@ -257,9 +270,9 @@ check((await page.inputValue('#ime')) === '', '다음 문장에서 입력칸 비
 await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
 
 // ── 긴 글: 이야기 차례대로 ──
-await page.goto(`${BASE}/index.html?all`);
+await page.goto(`${BASE}/index.html`);
 resetIme();
-await page.keyboard.press('ArrowLeft'); // 검정 → 11단계 긴 글
+await selectStage(page, STAGES.findIndex((s) => s.type === 'long')); // 11단계 긴 글
 await page.keyboard.press('Enter');
 check(await page.locator('#story').isVisible() && (await text('#roundLabel')).startsWith('11단계'), '긴 글 화면');
 check((await text('#storyPrev')).includes('고구마 밭'), '첫 줄 위에 이야기 제목');
@@ -279,8 +292,9 @@ const page3 = await browser.newPage({ viewport: { width: W, height: H } });
 page3.on('pageerror', (e) => errors.push(String(e)));
 const cdp3 = await page3.context().newCDPSession(page3);
 await page3.clock.install();
-await page3.goto(`${BASE}/index.html?all`);
-await page3.keyboard.press('Enter'); // 마지막 = 검정
+await page3.goto(`${BASE}/index.html`);
+await selectStage(page3, STAGES.findIndex((s) => s.type === 'test')); // 처음 온 사람도 검정을 바로 고를 수 있음
+await page3.keyboard.press('Enter');
 check((await page3.locator('#progressLabel').innerText()) === '남은 시간' && (await page3.locator('#progress').innerText()) === '1:00', '검정: 남은 시간 1:00 (치기 전에는 멈춤)');
 await page3.clock.runFor(5000);
 check((await page3.locator('#progress').innerText()) === '1:00', '첫 키 전에는 시간이 안 감');
@@ -299,14 +313,17 @@ await page3.screenshot({ path: `${OUT}/18-test-result.png` });
 await page3.close();
 
 // ── 게임: 고구마 비 ──
-await page.goto(`${BASE}/index.html?all`);
+await page.goto(`${BASE}/index.html`);
 resetIme();
-for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowLeft']) await page.keyboard.press(k); // 12 → 9 → 6 → 3 → 게임(2)
+await selectStage(page, STAGES.findIndex((s) => s.type === 'game'));
 check((await text('#homeChunsik .cs-bubble')).includes('고구마 비'), '게임 카드 고르기');
 await page.keyboard.press('Enter');
 check(await page.locator('#gameScreen').isVisible(), '게임 화면');
 await page.waitForTimeout(900);
 check(await page.locator('.drop').count() >= 1, '고구마가 떨어지기 시작');
+const homeWords = Object.keys(STAGES.find((s) => s.type === 'words').words);
+const dropWords = await page.locator('.drop .drop-word').allInnerTexts();
+check(dropWords.every((w) => homeWords.includes(w)), `1단계만 해 봤으면 기본자리 낱말만 떨어짐 (${dropWords.join(',')})`);
 const cs = await page.locator('#gameChunsik').boundingBox();
 const field = await page.locator('#rain').boundingBox();
 check(cs.y + cs.height > field.y + field.height - 40, '게임 춘식이는 땅 위(아래쪽)에');
@@ -345,8 +362,8 @@ check(await page.locator('#homeScreen').isVisible() && await page.locator('.drop
 const page2 = await browser.newPage({ viewport: { width: W, height: H } });
 page2.on('pageerror', (e) => errors.push(String(e)));
 await page2.clock.install();
-await page2.goto(`${BASE}/index.html?all`);
-for (const k of ['ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowLeft']) await page2.keyboard.press(k);
+await page2.goto(`${BASE}/index.html`);
+await selectStage(page2, STAGES.findIndex((s) => s.type === 'game'));
 await page2.keyboard.press('Enter');
 await page2.clock.runFor(100000);
 await page2.clock.runFor(2000);

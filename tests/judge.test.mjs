@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
-import { gogumaFor, gogumaForTest, saveStageResult, isUnlocked, totalGoguma } from '../js/records.js';
+import { gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
 import { STAGES, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, shuffleItems, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, ROWS } from '../js/layout.js';
@@ -133,7 +133,7 @@ test('모든 단계 데이터: 판 길이, 쓰는 글자, 합쳐질 수 있는 �
     assert.ok(!ids.has(stage.id), `id 중복 ${stage.id}`);
     ids.add(stage.id);
     assert.ok(stage.name && stage.group && stage.tip, stage.id);
-    if (stage.type === 'game') { assert.ok(stage.optional && stage.total > 0, stage.id); continue; }
+    if (stage.type === 'game') { assert.ok(stage.total > 0, stage.id); continue; }
     assert.ok(stage.rounds.length, stage.id);
     for (const ch of stageChars(stage)) assert.ok(keyFor(ch), `${stage.id}: ${ch} 키 없음`);
     if (stage.type !== 'keys') continue;
@@ -172,12 +172,16 @@ test('긴 글은 이야기 순서대로 판마다 이어짐', () => {
   assert.deepEqual(parts.flat(), stage.lines);
 });
 
-test('게임은 깨지 않아도 다음 단계가 열림', () => {
-  const game = STAGES.findIndex((s) => s.type === 'game');
-  const rec = { [STAGES[game - 1].id]: { goguma: 1 } };
-  assert.equal(isUnlocked(STAGES, rec, game), true);     // 게임 열림
-  assert.equal(isUnlocked(STAGES, rec, game + 1), true); // 게임 다음 단계도 열림
-  assert.equal(isUnlocked(STAGES, {}, game), false);
+test('게임 낱말: 해 본 단계까지의 낱말 단계만', () => {
+  const idx = (id) => STAGES.findIndex((s) => s.id === id);
+  const words = STAGES.filter((s) => s.type === 'words');
+  const ids = (rec) => gameWordStages(STAGES, rec).map((s) => s.id);
+  assert.deepEqual(ids({}), [words[0].id]);                                   // 처음: 첫 낱말 단계만
+  assert.deepEqual(ids({ 'keys-home': { plays: 1 } }), [words[0].id]);        // 1단계만 해 봄
+  assert.deepEqual(ids({ 'game-rain': { plays: 3 } }), [words[0].id]);        // 게임만 해 본 건 안 셈
+  // Shift 단계까지 해 봄 → 그 앞의 낱말 단계들 (Shift 글자가 든 '모든 자리 낱말'은 빠짐)
+  assert.deepEqual(ids({ 'keys-shift': { plays: 1 } }), words.filter((w) => STAGES.indexOf(w) < idx('keys-shift')).map((w) => w.id));
+  assert.deepEqual(ids({ 'test-1min': { plays: 1 } }), words.map((w) => w.id)); // 검정까지 해 봤으면 모든 낱말
 });
 
 test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () => {
@@ -264,22 +268,20 @@ test('Shift 글자·숫자·문장부호도 입력기 흉내로 판정', () => {
   assert.equal(judge.done, true);
 });
 
-test('고구마와 단계 열림', () => {
+test('고구마와 골라 둘 단계', () => {
   assert.equal(gogumaFor(null), 0);
   assert.equal(gogumaFor(0.69), 0);
   assert.equal(gogumaFor(0.7), 1);
   assert.equal(gogumaFor(0.85), 2);
   assert.equal(gogumaFor(0.95), 3);
   const rec = {};
-  assert.equal(isUnlocked(STAGES, rec, 0), true);
-  assert.equal(isUnlocked(STAGES, rec, 1), false);
-  assert.equal(isUnlocked(STAGES, rec, 1, true), true);
+  assert.equal(suggestStage(STAGES, rec), 0);      // 처음엔 1단계
   let r = saveStageResult(rec, STAGES[0].id, 0.6); // 저장소가 없어도(노드) 동작해야 함
   assert.deepEqual([r.goguma, r.firstClear, r.newBest], [0, false, false]);
-  assert.equal(isUnlocked(STAGES, rec, 1), false);
+  assert.equal(suggestStage(STAGES, rec), 0);      // 고구마 못 받음 → 같은 단계
   r = saveStageResult(rec, STAGES[0].id, 0.9);
   assert.deepEqual([r.goguma, r.firstClear, r.newBest], [2, true, true]);
-  assert.equal(isUnlocked(STAGES, rec, 1), true);
+  assert.equal(suggestStage(STAGES, rec), 1);      // 받음 → 다음 단계
   r = saveStageResult(rec, STAGES[0].id, 0.8); // 더 낮은 기록은 고구마를 줄이지 않음
   assert.deepEqual([r.goguma, r.firstClear, r.newBest], [1, false, false]);
   assert.equal(rec[STAGES[0].id].goguma, 2);
@@ -297,11 +299,11 @@ test('고구마와 단계 열림', () => {
   assert.deepEqual([c.newBestCpm, c.bestCpm], [true, 95]);
   const d = saveStageResult(r2, 'x', 0.9, 70);
   assert.deepEqual([d.newBestCpm, d.bestCpm], [false, 95]);
-  // 순서가 바뀌어 앞 단계를 안 깼어도, 이미 깬 단계는 열려 있음
-  const moved = { [STAGES[3].id]: { goguma: 1 } };
-  assert.equal(isUnlocked(STAGES, moved, 3), true);
-  assert.equal(isUnlocked(STAGES, moved, 4), true);
-  assert.equal(isUnlocked(STAGES, moved, 1), false);
+  // 가장 최근에 한 단계 기준 (앞 단계를 안 했어도 상관없음), 마지막 단계는 그대로
+  assert.equal(suggestStage(STAGES, { [STAGES[0].id]: { goguma: 3, lastAt: 1 }, [STAGES[7].id]: { goguma: 0, lastAt: 2 } }), 7);
+  assert.equal(suggestStage(STAGES, { [STAGES[5].id]: { goguma: 1, lastAt: 5 } }), 6);
+  const lastI = STAGES.length - 1;
+  assert.equal(suggestStage(STAGES, { [STAGES[lastI].id]: { goguma: 2, lastAt: 1 } }), lastI);
 });
 
 test('F65 배열: 줄마다 16칸, 67키, 자모마다 키가 있음', () => {

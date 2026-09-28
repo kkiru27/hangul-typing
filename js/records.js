@@ -3,7 +3,7 @@
 
 const KEY = 'hangul-typing:records:v1';
 
-// 정확도 → 고구마 개수 (1개 이상이면 다음 단계가 열린다)
+// 정확도 → 고구마 개수
 export const GOGUMA_RULE = [[0.95, 3], [0.85, 2], [0.7, 1]];
 export const GOGUMA_MAX = 3;
 
@@ -51,15 +51,26 @@ export function saveStageResult(records, stageId, acc, cpm = null, goguma = gogu
   };
 }
 
-// 1단계는 늘 열려 있고, 나머지는 앞 단계에서 고구마를 1개라도 받으면 열린다.
-// 앞 단계가 게임처럼 optional이면 건너뛰고 그 앞 단계를 본다 (게임을 안 해도 진행 가능).
-// 이미 고구마를 받은 단계도 열려 있다 (단계 순서를 바꿔도 깬 단계가 다시 잠기지 않게).
-export function isUnlocked(stages, records, i, all = false) {
-  const cleared = (id) => (records[id]?.goguma ?? 0) > 0;
-  if (all || i === 0 || cleared(stages[i]?.id)) return true;
-  let j = i - 1;
-  while (j > 0 && stages[j].optional) j--;
-  return cleared(stages[j]?.id);
+// 모든 단계는 처음부터 열려 있다 (자기 수준에 맞는 단계를 골라서 시작).
+// 단계 지도에서 골라 둘 단계: 가장 최근에 끝낸 단계. 그 단계에서 고구마를 받은 적이 있으면 다음 단계. 처음이면 1단계
+export function suggestStage(stages, records) {
+  let last = -1;
+  let at = 0;
+  stages.forEach((s, i) => {
+    const t = records[s.id]?.lastAt ?? 0;
+    if (t > at) { last = i; at = t; }
+  });
+  if (last < 0) return 0;
+  return (records[stages[last].id].goguma ?? 0) > 0 ? Math.min(last + 1, stages.length - 1) : last;
+}
+
+// 게임(고구마 비)에 떨어뜨릴 낱말 단계: 끝내 본 단계 중 가장 뒤 단계까지의 낱말 단계.
+// 아직 앞쪽만 해 봤으면 첫 낱말 단계만 (처음 온 사람에게 안 배운 자리의 낱말이 떨어지지 않게)
+export function gameWordStages(stages, records) {
+  const reach = Math.max(-1, ...stages.map((s, i) => (s.type !== 'game' && records[s.id]?.plays ? i : -1)));
+  const all = stages.filter((s) => s.type === 'words');
+  const upTo = all.filter((s) => stages.indexOf(s) <= reach);
+  return upTo.length ? upTo : all.slice(0, 1);
 }
 
 export function totalGoguma(stages, records) {

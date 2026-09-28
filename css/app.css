@@ -80,24 +80,19 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   transition: transform .12s, box-shadow .12s, border-color .12s;
 }
 .stage-card.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 122, 89, .22); transform: translateY(-3px); }
-.stage-card.locked { background: #f4efe8; color: #b3a59b; }
-.stage-card.shake { animation: shake-x .35s; }
 @keyframes shake-x { 25% { translate: -5px 0; } 50% { translate: 5px 0; } 75% { translate: -3px 0; } }
 .sc-num { font-size: 13px; font-weight: 800; color: var(--accent); }
-.stage-card.locked .sc-num { color: #b3a59b; }
 .sc-name { font-size: 19px; font-weight: 800; }
 .sc-keys { font-size: 15px; color: var(--muted); letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-goguma { display: flex; gap: 4px; margin-top: 3px; }
 .sc-goguma .goguma { width: 28px; }
 .goguma.off { filter: grayscale(1); opacity: .28; }
-.sc-lock { position: absolute; right: 10px; top: 8px; font-size: 18px; }
 .map-pages { display: flex; gap: 8px; min-height: 10px; }
 .map-pages span { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
 .map-pages span.on { background: var(--accent); }
 .sc-group { position: absolute; right: 10px; bottom: 8px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #eef6ff; color: var(--index); }
 .sc-group.words { background: #e9f7ef; color: var(--ok); }
 .sc-group.game { background: var(--thumb-soft); color: var(--thumb); }
-.stage-card.locked .sc-group { background: #ece6de; color: #b3a59b; }
 .map-tip { margin: 2px 0 0; min-height: 20px; max-width: 580px; text-align: center; font-size: 15px; color: var(--muted); }
 .press-enter { margin: 14px 0 0; font-size: 22px; font-weight: 700; }
 .press-enter kbd { font-size: 20px; border-color: var(--index); color: var(--index); }
@@ -221,7 +216,7 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 
 
 /* 게임: 고구마 비 */
-.game { justify-content: flex-start; gap: 8px; padding: 4px 24px 6px; }
+.screen.game { justify-content: flex-start; gap: 8px; padding: 4px 24px 6px; }
 .rain {
   position: relative; flex: 1; min-height: 0; width: min(1080px, 100%);
   border-radius: 22px; border: 2px solid var(--line); overflow: hidden;
