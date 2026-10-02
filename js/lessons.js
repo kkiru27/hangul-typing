@@ -14,8 +14,8 @@
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js';
-import { makeSentences } from './sentence-maker.js';
+import { toKeys } from './hangul.js?v=202610021304';
+import { makeSentences } from './sentence-maker.js?v=202610021304';
 
 // 낱말 → 그림 (그림이 없으면 빈칸). 주제별로 모아 적고, 판에서는 섞어서 낸다 (덜 본 낱말 먼저: app.js freshOrder)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말. ㅘ(ㅗ+ㅏ)·ㅚ(ㅗ+ㅣ)도 이 키로 칠 수 있다. 이 자리로 되는 낱말은 원래 많지 않다
@@ -442,6 +442,19 @@ export const GAMES = [
       { desc: '보통 빠르기', total: 14, max: 3, fall: [15000, 10000], gap: [4800, 3400] },
       { desc: '빨리', total: 15, max: 3, fall: [14000, 9000], gap: [4500, 3000] },
       { desc: '아주 빨리!', total: 18, max: 4, fall: [12000, 7500], gap: [4000, 2600] },
+    ],
+  },
+  {
+    id: 'game-race', type: 'race', group: '게임', name: '춘식이 달리기', unlock: 15,
+    preview: '🏁 동물 친구와 낱말 달리기',
+    tip: '낱말을 치고 스페이스바를 누를 때마다 춘식이가 달려요. 동물 친구보다 먼저 들어오면 이겨요!',
+    // 동물 빠르기 cpm: 1분에 치는 키 수 (초보 눈높이로 정한 값 — 동생 기록을 보고 조정), words: 칠 낱말 수
+    levels: [
+      { desc: '🐢 거북이와 달리기', rival: '🐢', rivalName: '거북이', cpm: 20, words: 5 },
+      { desc: '🦆 오리와 달리기', rival: '🦆', rivalName: '오리', cpm: 30, words: 6 },
+      { desc: '🐶 강아지와 달리기', rival: '🐶', rivalName: '강아지', cpm: 45, words: 7 },
+      { desc: '🐰 토끼와 달리기', rival: '🐰', rivalName: '토끼', cpm: 65, words: 8 },
+      { desc: '🐆 치타와 달리기!', rival: '🐆', rivalName: '치타', cpm: 90, words: 9 },
     ],
   },
 ];

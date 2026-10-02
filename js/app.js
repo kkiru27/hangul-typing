@@ -2,21 +2,22 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js';
-import { InputBridge } from './input-bridge.js';
-import { KeyboardView } from './keyboard-view.js';
-import { HandsView } from './hands-view.js';
-import { STAGES, GAMES, gameLevel, levelKeys, levelWords, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js';
-import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js';
-import { VERSION } from './version.js';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js';
-import { checkForUpdate } from './update-check.js';
-import { RainGame } from './game-rain.js';
-import { DigGame } from './game-dig.js';
-import { Sound } from './sound.js';
-import { loadSettings, saveSettings } from './settings.js';
+import { Judge } from './judge.js?v=202610021304';
+import { InputBridge } from './input-bridge.js?v=202610021304';
+import { KeyboardView } from './keyboard-view.js?v=202610021304';
+import { HandsView } from './hands-view.js?v=202610021304';
+import { STAGES, GAMES, gameLevel, levelKeys, levelWords, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js?v=202610021304';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610021304';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610021304';
+import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610021304';
+import { VERSION } from './version.js?v=202610021304';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202610021304';
+import { checkForUpdate } from './update-check.js?v=202610021304';
+import { RainGame } from './game-rain.js?v=202610021304';
+import { DigGame } from './game-dig.js?v=202610021304';
+import { RaceGame } from './game-race.js?v=202610021304';
+import { Sound } from './sound.js?v=202610021304';
+import { loadSettings, saveSettings } from './settings.js?v=202610021304';
 
 const $ = (id) => document.getElementById(id);
 
@@ -56,6 +57,7 @@ const state = {
   level: null,         // 게임 중이면 지금 레벨 (lessons.js gameLevel)
   combo: 0,            // 게임: 연달아 잡은 수
   digLen: 0,           // 고구마 캐기: 입력칸에서 이미 낸 키 수
+  race: null,          // 춘식이 달리기: { items, idx, judge, doneKeys, totalKeys, correct, mistakes }
   bestCombo: 0,
   stageIdx: 0,
   stage: STAGES[0],
@@ -405,7 +407,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021304';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -472,7 +474,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610021304';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -685,7 +687,7 @@ function startGame(gi, n) {
   $('roundLabel').textContent = title;
   $('stageLabel').textContent = title;
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021304';
   $('gameScreen').dataset.kind = game.type;
   $('gameCombo').hidden = true;
   show('game');
@@ -727,20 +729,22 @@ function comboBreak() {
   $('gameCombo').hidden = true;
 }
 
-// 결과: hits/total로 고구마. lines: 아래에 덧붙일 기록들
-function showGameResult({ hits, total, label = '잡은 고구마', lines = [] }) {
-  const acc = total ? hits / total : 0;
-  const saved = save(acc);
+// 결과: 보통은 hits/total로 고구마. 달리기처럼 따로 정하면 acc·goguma·value를 넘긴다. lines: 아래에 덧붙일 기록들
+function showGameResult({
+  hits, total, acc = total ? hits / total : 0, goguma = gogumaFor(acc), cpm = null,
+  label = '잡은 고구마', value = `${hits} / ${total}`, lines = [], failText = '70% 넘게 해내면 고구마를 받아요',
+}) {
+  const saved = save(acc, cpm, goguma);
   const { n } = state.level;
   const game = state.stage;
   if (n < game.levels.length && isLevelOpen(game, n + 1, state.records) && saved.goguma > 0) state.levelSel = n; // 다음 레벨을 골라 둔다
   show('stageDone');
   $('resultTitle').textContent = `${gameTitle(game)} 레벨 ${n} 끝! ${cheer(saved.goguma)}`;
   $('resultAccLabel').textContent = label;
-  $('resultAcc').textContent = `${hits} / ${total}`;
+  $('resultAcc').textContent = value;
   $('resultGoguma').hidden = false;
   $('resultGoguma').innerHTML = gogumaIcons(saved.goguma);
-  showNotes(saved, '70% 넘게 해내면 고구마를 받아요');
+  showNotes(saved, failText);
   if (state.bestCombo >= 2) lines.push(`최고 콤보 <b>${state.bestCombo}</b>`);
   $('resultRounds').innerHTML = lines.join(' · ');
   $('resultMiss').innerHTML = '';
@@ -925,8 +929,123 @@ function renderDig() {
   $('track').style.setProperty('--p', game.resolved / game.total);
 }
 
+// ───── 게임: 춘식이 달리기 (낱말 + 스페이스바, 동물 친구와 경주) ─────
+
+function startRace(level) {
+  const items = freshOrder(levelWords(level.n), state.seen).slice(0, level.words).map((w) => `${w} `);
+  const totalKeys = items.reduce((n, w) => n + toKeys(w).length, 0);
+  state.race = { items, idx: 0, judge: new Judge(items[0]), doneKeys: 0, totalKeys, correct: 0, mistakes: 0, over: false };
+  $('gameHint').textContent = '첫 글자를 치면 출발!';
+  state.game = new RaceGame($('rain'), {
+    rival: level.rival,
+    rivalName: level.rivalName,
+    totalKeys,
+    cpm: level.cpm,
+    onRivalWin: () => finishRace(false),
+  });
+}
+
+// 낱말 연습과 같은 판정: 틀리면 Backspace로 지워야 넘어간다. 첫 키에 동물도 출발
+function onRaceInput({ raw, base, keys, composing }) {
+  const race = state.race;
+  if (!race || race.over) return;
+  state.input = { raw, base, composing };
+  const { judge } = race;
+  const events = judge.update(keys);
+  if (events.length && !state.game.started) state.game.go();
+  for (const ev of events) {
+    if (ev.kind === 'latin') continue;
+    if (isHangul(ev.key) && state.warn === 'english') setWarn(null);
+    const code = keyFor(ev.key)?.code;
+    if (ev.kind === 'ok' || ev.kind === 'retype') {
+      sound.play('key');
+      if (code) keyboard.flash(code, 'ok');
+    } else {
+      sound.play('miss');
+      if (code) keyboard.flash(code, 'bad');
+      shake($('gameBar'));
+    }
+  }
+  if (judge.done) {
+    race.correct += judge.correct;
+    race.mistakes += judge.mistakes;
+    race.doneKeys += judge.target.length;
+    race.idx++;
+    if (race.idx >= race.items.length) return finishRace(true);
+    sound.play('word');
+    race.judge = new Judge(race.items[race.idx]);
+    bridge.rebase();
+    state.input = { raw: '', base: 0, composing: false };
+  }
+  renderGame();
+}
+
+// 끝: 춘식이가 먼저(win) 또는 동물이 먼저. 이겼을 때만 정확도로 고구마
+function finishRace(win) {
+  const race = state.race;
+  if (race.over) return;
+  race.over = true;
+  const game = state.game;
+  if (win) {
+    game.finish();
+    game.setMe(1);
+    $('progress').textContent = `${race.idx}/${race.items.length}`;
+    $('track').style.setProperty('--p', 1);
+  } else {
+    race.correct += race.judge.correct;
+    race.mistakes += race.judge.mistakes;
+  }
+  const typed = race.correct + race.mistakes;
+  const acc = typed ? race.correct / typed : 0;
+  const cpm = game.t >= 2000 ? Math.round(race.correct / (game.t / 60000)) : null;
+  const { rivalName, cpm: rivalCpm } = state.level;
+  sound.play(win ? 'round' : 'drop');
+  endGame({
+    acc, cpm, goguma: win ? gogumaFor(acc) : 0,
+    label: '달리기', value: win ? '🏁 이겼어요!' : '아쉽게 졌어요',
+    lines: [`정확도 <b>${pct(acc)}</b>`, `춘식이 <b>${cpm ?? '–'}</b>타`, `${rivalName} <b>${rivalCpm}</b>타`],
+    failText: win ? '정확도 70%를 넘으면 고구마를 받아요' : `${rivalName}보다 먼저 들어오면 고구마를 받아요`,
+  });
+}
+
+function renderRace() {
+  const race = state.race;
+  const game = state.game;
+  const { judge } = race;
+  // 지금 낱말: 글자마다 색, 다 치면 스페이스 표시
+  const states = judge.unitStates();
+  const chars = judge.units.slice(0, -1).map((u, i) => `<span class="${states[i]}">${escapeHtml(u.ch)}</span>`).join('');
+  const spaceNext = judge.nextKey === ' ' && !judge.hasError;
+  game.wordEl.innerHTML = `${chars}<span class="race-space ${spaceNext ? 'next' : ''}">스페이스 ⎵</span>`;
+  game.nextEl.textContent = race.items.slice(race.idx + 1).map((w) => w.trim()).join(' · ') || '마지막 낱말!';
+  // 친 글자 막대
+  const { raw, base, composing } = state.input;
+  const units = toUnits(raw).filter((u) => u.end > base && u.ch !== ' ');
+  $('gameText').innerHTML = units.map((u, i) =>
+    `<span class="${judge.hasError ? 'bad' : 'ok'} ${composing && i === units.length - 1 ? 'composing' : ''}">${escapeHtml(u.ch)}</span>`).join('');
+  $('gameHint').hidden = units.length > 0;
+  $('gameBar').classList.toggle('bad', judge.hasError);
+  // 다음 키
+  let codes;
+  if (state.warn === 'english') codes = ['CapsLock'];
+  else if (judge.hasError) codes = ['Backspace'];
+  else if (judge.nextKey === ' ') codes = ['Space'];
+  else codes = judge.nextKey ? codesFor(judge.nextKey) : [];
+  keyboard.setNext(codes, state.warn === 'english' ? 'warn' : 'finger');
+  hands.setTargets(codes);
+  // 춘식이 자리: 맞게 친 키만큼
+  const me = (race.doneKeys + judge.okLen) / race.totalKeys;
+  game.setMe(me);
+  const c = race.correct + judge.correct;
+  const m = race.mistakes + judge.mistakes;
+  $('progress').textContent = `${race.idx}/${race.items.length}`;
+  $('accuracy').textContent = pct(c + m ? c / (c + m) : null);
+  $('track').style.setProperty('--p', me);
+}
+
 // 게임 종류별: 시작 · 입력 · 그리기
 const GAME_KINDS = {
+  race: { start: startRace, input: onRaceInput, render: renderRace },
   dig: { start: startDig, input: onDigInput, render: renderDig },
   rain: { start: startRain, input: onRainInput, render: renderRain },
 };

@@ -1,8 +1,8 @@
 // 고구마 비: 낱말이 적힌 고구마가 떨어진다. 낱말을 치고 스페이스바(또는 Enter)를 누르면 춘식이가 먹는다.
 // 초보용: 게임 오버 없음, 천천히 떨어지고, 한 화면에 최대 3개.
 
-import { toKeys } from './hangul.js';
-import { GOGUMA_SVG } from './chunsik-view.js';
+import { toKeys } from './hangul.js?v=202610021304';
+import { GOGUMA_SVG } from './chunsik-view.js?v=202610021304';
 
 const lerp = (a, b, t) => a + (b - a) * Math.min(1, Math.max(0, t));
 

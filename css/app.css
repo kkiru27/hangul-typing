@@ -429,3 +429,35 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   .result-acc b { font-size: 44px; }
   .result-goguma .goguma { width: 42px; }
 }
+
+/* 게임: 춘식이 달리기 — 위에 지금 낱말, 아래에 두 줄 달리기 길 */
+#gameScreen[data-kind="race"] .rain .game-chunsik { display: none; }
+.race { position: absolute; inset: 0 0 26px; display: flex; flex-direction: column; justify-content: space-around; padding: 10px 28px; }
+.race-words { text-align: center; }
+.race-next { font-size: 16px; font-weight: 700; color: var(--muted); min-height: 22px; }
+.race-word { font-size: 46px; font-weight: 800; letter-spacing: 1px; }
+.race-word .pending { color: #c9bcb1; }
+.race-word .done { color: var(--ok); }
+.race-word .typing { color: var(--index); text-decoration: underline 4px; text-underline-offset: 7px; }
+.race-word .error { color: var(--bad); background: #fde6e7; border-radius: 8px; }
+.race-space { margin-left: 12px; padding: 2px 10px; border-radius: 10px; border: 2px dashed var(--line); font-size: 18px; color: var(--muted); vertical-align: middle; }
+.race-space.next { border: 2.5px solid var(--thumb); color: var(--thumb); background: var(--thumb-soft); }
+.race-track { position: relative; display: flex; flex-direction: column; gap: 10px; padding-right: 18px; }
+.race-lane { position: relative; height: 62px; border-radius: 14px; background: #f6ead9; border: 2px dashed #e3cfb4; }
+.race-lane.me { background: #fff1ea; }
+.race-name { position: absolute; right: 26px; top: 3px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.race-runner {
+  position: absolute; bottom: 2px; left: calc(var(--p, 0) * (100% - 64px)); width: 64px;
+  display: flex; justify-content: center; font-size: 44px; line-height: 56px; transition: left .25s linear;
+}
+.race-runner img { height: 58px; }
+.race-finish {
+  position: absolute; right: 0; top: -4px; bottom: -4px; width: 14px; border-radius: 4px;
+  background: repeating-conic-gradient(#3a2e2a 0 25%, #fff 0 50%) 0 0 / 7px 7px;
+}
+@media (max-height: 700px) {
+  .race-word { font-size: 36px; }
+  .race-lane { height: 52px; }
+  .race-runner { font-size: 36px; line-height: 48px; }
+  .race-runner img { height: 48px; }
+}

@@ -613,5 +613,54 @@ await page2.keyboard.press('Enter');
 check(await page2.locator('#homeScreen').getAttribute('data-page') === 'levels', '게임 결과에서 Enter → 레벨 목록');
 await page2.close();
 
+// ── 게임: 춘식이 달리기 (고구마 15개를 모았다고 치고, 시계를 손으로 돌려서) ──
+const page5 = await browser.newPage({ viewport: { width: W, height: H } });
+page5.on('pageerror', (e) => errors.push(String(e)));
+const cdp5 = await page5.context().newCDPSession(page5);
+await page5.clock.install();
+await page5.goto(`${BASE}/index.html`);
+await page5.evaluate(() => localStorage.setItem('hangul-typing:records:v1', JSON.stringify(Object.fromEntries(
+  ['keys-home', 'words-home', 'keys-top-left', 'keys-top-right', 'words-top'].map((id, i) => [id, { best: 0.96, goguma: 3, plays: 1, lastAt: i + 1 }])))));
+await page5.reload();
+await openPage(page5, 1);
+const raceIdx = await page5.locator('.game-card').evaluateAll((els) => els.findIndex((el) => el.textContent.includes('춘식이 달리기')));
+for (let i = 0; i < raceIdx; i++) await page5.keyboard.press('ArrowRight');
+check(raceIdx >= 0 && !(await page5.locator('.game-card.selected').evaluate((el) => el.classList.contains('locked'))), '고구마 15개 → 춘식이 달리기 열림');
+await page5.keyboard.press('Enter'); await page5.keyboard.press('Enter'); // 레벨 1
+const raceWord = () => page5.locator('.race-word').innerText().then((t) => t.replace(/스페이스.*/s, '').trim());
+check((await page5.locator('#roundLabel').innerText()).includes('춘식이 달리기 · 레벨 1') && (await page5.locator('.race-lane.rival').innerText()).includes('🐢'), '달리기 레벨 1: 거북이와');
+const rw1 = await raceWord();
+for (const k of [...toKeys(rw1), ' ']) await cdp5.send('Input.insertText', { text: k });
+const meP = await page5.locator('.race-lane.me .race-runner').evaluate((el) => +el.style.getPropertyValue('--p'));
+check((await page5.locator('#progress').innerText()) === '1/5' && meP > 0, `낱말(${rw1}) + 스페이스 → 춘식이가 앞으로 (${meP.toFixed(2)})`);
+// 일시정지 동안 거북이도 멈춤
+await page5.clock.runFor(2000);
+const rv0 = await page5.locator('.race-lane.rival .race-runner').evaluate((el) => +el.style.getPropertyValue('--p'));
+await page5.keyboard.press('Escape');
+await page5.clock.runFor(20000);
+const rv1 = await page5.locator('.race-lane.rival .race-runner').evaluate((el) => +el.style.getPropertyValue('--p'));
+check(rv0 > 0 && Math.abs(rv1 - rv0) < 0.01, `첫 키 뒤 거북이 출발, 멈춘 동안은 그대로 (${rv0.toFixed(3)} → ${rv1.toFixed(3)})`);
+await page5.keyboard.press('Escape');
+// 나머지 낱말을 빨리 다 치면 이김
+for (let i = 1; i < 5; i++) {
+  const w = await raceWord();
+  for (const k of [...toKeys(w), ' ']) await cdp5.send('Input.insertText', { text: k });
+}
+await page5.clock.runFor(1500);
+check(await page5.locator('#resultScreen').isVisible() && (await page5.locator('#resultAcc').innerText()).includes('이겼어요')
+  && await page5.locator('#resultGoguma .goguma.earned').count() === 3, '먼저 들어오면 이김 + 고구마 3개');
+check((await page5.locator('#resultRounds').innerText()).includes('거북이 20타'), '결과에 동물 빠르기');
+await page5.waitForTimeout(500);
+await page5.screenshot({ path: `${OUT}/25-race-win.png` });
+await page5.keyboard.press('Enter');
+await page5.keyboard.press('ArrowLeft'); await page5.keyboard.press('Enter'); // 다시 레벨 1
+const rw = await raceWord();
+await cdp5.send('Input.insertText', { text: toKeys(rw)[0] });
+await page5.clock.runFor(400000); // 거북이가 다 가는 데 몇 분
+await page5.clock.runFor(1500);
+check(await page5.locator('#resultScreen').isVisible() && (await page5.locator('#resultAcc').innerText()).includes('졌어요')
+  && await page5.locator('#resultGoguma .goguma.earned').count() === 0 && (await page5.locator('#resultNote').innerText()).includes('거북이보다 먼저'), '거북이가 먼저 들어오면 짐: 고구마 0, 안내');
+await page5.close();
+
 check(errors.length === 0, `콘솔 오류 없음 ${errors.join(' / ')}`);
 await browser.close();
