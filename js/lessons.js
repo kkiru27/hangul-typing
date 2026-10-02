@@ -15,6 +15,7 @@
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
 import { toKeys } from './hangul.js';
+import { makeSentences } from './sentence-maker.js';
 
 // 낱말 → 그림 (그림이 없으면 빈칸). 주제별로 모아 적고, 판에서는 섞어서 낸다 (덜 본 낱말 먼저: app.js freshOrder)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말. ㅘ(ㅗ+ㅏ)·ㅚ(ㅗ+ㅣ)도 이 키로 칠 수 있다. 이 자리로 되는 낱말은 원래 많지 않다
@@ -353,6 +354,15 @@ export function freshOrder(items, seen = {}, rand = Math.random) {
     [list[i], list[j]] = [list[j], list[i]];
   }
   return list.sort((a, b) => (seen[a] ?? 0) - (seen[b] ?? 0)); // sort는 순서를 지키므로 섞은 순서가 남는다
+}
+
+// 짧은 글·검정의 문장 순서: 조립한 새 문장 2 : 손으로 쓴 문장(덜 본 것 먼저) 1
+export function sentenceOrder(stage, seen = {}, rand = Math.random) {
+  const hand = freshOrder(stageItems(stage), seen, rand);
+  const made = makeSentences(hand.length * 2, rand, new Set(Object.keys(seen)));
+  const out = [];
+  hand.forEach((h, i) => out.push(...made.slice(i * 2, i * 2 + 2), h));
+  return out;
 }
 
 // 단계를 시작할 때 정한 순서(order)에서 판마다 count개씩 차례로 쓴다 (모자라면 처음부터 다시)

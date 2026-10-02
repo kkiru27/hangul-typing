@@ -6,7 +6,7 @@ import { Judge } from './judge.js';
 import { InputBridge } from './input-bridge.js';
 import { KeyboardView } from './keyboard-view.js';
 import { HandsView } from './hands-view.js';
-import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, itemsForRound } from './lessons.js';
+import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, itemsForRound } from './lessons.js';
 import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js';
 import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js';
 import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js';
@@ -306,8 +306,10 @@ function startStage(i) {
   state.roundIdx = 0;
   state.results = [];
   const type = state.stage.type;
-  // 긴 글은 이야기 순서 그대로, 낱말·짧은 글·검정은 덜 본 것 먼저
-  state.itemOrder = type === 'long' ? [...state.stage.lines] : ['words', 'sentences', 'test'].includes(type) ? freshOrder(stageItems(state.stage), state.seen) : [];
+  // 긴 글은 이야기 순서 그대로, 낱말은 덜 본 것 먼저, 짧은 글·검정은 새로 조립한 문장 + 덜 본 문장
+  state.itemOrder = type === 'long' ? [...state.stage.lines]
+    : type === 'words' ? freshOrder(stageItems(state.stage), state.seen)
+      : type === 'sentences' || type === 'test' ? sentenceOrder(state.stage, state.seen) : [];
   state.testStart = 0;
   bridge.focus();
   startRound();

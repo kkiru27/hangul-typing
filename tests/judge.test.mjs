@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
 import { markSeen, SEEN_MAX, gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, freshOrder, itemsForRound } from '../js/lessons.js';
+import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, freshOrder, sentenceOrder, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, LAYOUTS, LAYOUT_IDS, DEFAULT_LAYOUT, getLayout, layoutKeys } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
+import { makeSentence, makeSentences, MAX_LEN, SUBJECTS, SCENES, WITH } from '../js/sentence-maker.js';
 
 test('글자 → 키 순서', () => {
   assert.deepEqual(toKeys('한'), ['ㅎ', 'ㅏ', 'ㄴ']);
@@ -348,4 +349,71 @@ test('키보드 배열 3개: 줄 너비가 같고, 글자 키는 모두 같은 �
   assert.deepEqual(codesFor('ㅁ'), ['KeyA']);
   assert.deepEqual(codesFor('ㅃ'), ['ShiftRight', 'KeyQ']);
   assert.deepEqual(codesFor('?'), ['ShiftLeft', 'Slash']);
+});
+
+// 같은 씨앗이면 같은 수열 (시험을 늘 같게)
+function seeded(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+test('문장 조립기: 모양·길이·키·입력기로 끝까지 칠 수 있음', () => {
+  const rand = seeded(42);
+  const list = Array.from({ length: 600 }, () => makeSentence(rand));
+  assert.ok(new Set(list).size >= 400, `서로 다른 문장이 충분히 많음 (${new Set(list).size}/600)`);
+  for (const t of list) {
+    assert.match(t, /[.!?]$/, t);
+    assert.ok(!/\s\s|^\s|\s[.!?]$/.test(t), `띄어쓰기: '${t}'`);
+    assert.ok(t.length <= MAX_LEN, `너무 김: '${t}'`);
+    assert.ok(!/[`~]/.test(t));
+    for (const k of toKeys(t)) assert.ok(k === ' ' || keyFor(k), `${t}: ${k} 키 없음`);
+  }
+  for (const t of list.slice(0, 120)) {
+    const { judge, log, text } = run(t, toKeys(t));
+    assert.equal(text, t);
+    assert.ok(log.every((k) => k === 'ok') && judge.done, `${t}: ${log.join(',')}`);
+  }
+});
+
+test('문장 조립기: 조사와 시제가 맞음', () => {
+  const rand = seeded(7);
+  const list = Array.from({ length: 1500 }, () => makeSentence(rand));
+  const nouns = new Set([...SUBJECTS, ...WITH, ...SCENES.flatMap((s) => s.objects)]);
+  const pairs = [['을', '를'], ['이', '가'], ['은', '는'], ['과', '와']];
+  for (const t of list) {
+    for (const n of nouns) {
+      for (const [withB, without] of pairs) {
+        const m = t.match(new RegExp(`(^|\\s)${n}(${withB}|${without})\\s`));
+        if (m) assert.equal(m[2], josa(n, withB, without), `조사: '${t}'`);
+      }
+    }
+    if (/^(어제|아까) /.test(t)) assert.match(t, /(았|었|했|췄|샀|봤|잤|갔|렸)어요[.!]$/, `지난 일: '${t}'`);
+    if (/^(내일|주말에|방학에) /.test(t)) assert.match(t, /거예요[.!]$/, `앞으로 할 일: '${t}'`);
+    if (/^지금 /.test(t)) assert.ok(!/(거예요|었어요|았어요|했어요)/.test(t), `지금: '${t}'`);
+  }
+  // 함께 가는 사람과 하는 사람이 같지 않음
+  for (const t of list) for (const w of WITH) assert.ok(!new RegExp(`${w}\\S* .*${w}(와|과) 함께`).test(t), `겹침: ${t}`);
+});
+
+test('문장 조립기: 서로 다른 n개, 최근에 친 문장은 빼고', () => {
+  const rand = seeded(3);
+  const avoid = new Set(makeSentences(50, seeded(3)));
+  const list = makeSentences(30, rand, avoid);
+  assert.equal(list.length, 30);
+  assert.equal(new Set(list).size, 30);
+  assert.ok(list.every((t) => !avoid.has(t)));
+});
+
+test('짧은 글 순서: 조립한 문장 2 : 손으로 쓴 문장 1, 손으로 쓴 건 모두 들어감', () => {
+  const stage = STAGES.find((s) => s.type === 'sentences');
+  const order = sentenceOrder(stage, {}, seeded(5));
+  const hand = new Set(stageItems(stage));
+  assert.equal(order.length, hand.size * 3);
+  assert.deepEqual(new Set(order.filter((t) => hand.has(t))), hand);
+  assert.ok(order.slice(0, 15).filter((t) => hand.has(t)).length === 5, '한 번 하는 15문장 중 5개가 손으로 쓴 것');
+  assert.equal(new Set(order).size, order.length, '겹치는 문장 없음');
 });
