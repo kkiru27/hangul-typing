@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
 import { markSeen, SEEN_MAX, gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, freshOrder, sentenceOrder, itemsForRound } from '../js/lessons.js';
+import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, LAYOUTS, LAYOUT_IDS, DEFAULT_LAYOUT, getLayout, layoutKeys } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 import { makeSentence, makeSentences, MAX_LEN, SUBJECTS, SCENES, WITH } from '../js/sentence-maker.js';
@@ -172,8 +172,20 @@ test('단계 순서와 제목 (게임은 연습 단계와 따로)', () => {
 
 test('긴 글은 이야기 순서대로 판마다 이어짐', () => {
   const stage = STAGES.find((s) => s.type === 'long');
-  const parts = stage.rounds.map((_, i) => itemsForRound(stage.lines, stage, i));
-  assert.deepEqual(parts.flat(), stage.lines);
+  assert.ok(stage.stories.length >= 7, '이야기 여러 편');
+  assert.equal(new Set(stage.stories.map((st) => st.title)).size, stage.stories.length, '제목이 겹치지 않음');
+  const perStage = stage.rounds.reduce((n, r) => n + r.count, 0);
+  for (const st of stage.stories) {
+    assert.equal(st.lines.length, perStage, `${st.title}: 판 3개에 딱 맞게 ${perStage}줄`);
+    const parts = stage.rounds.map((_, i) => itemsForRound(st.lines, stage, i));
+    assert.deepEqual(parts.flat(), st.lines);
+    for (const line of st.lines) assert.ok(line.length <= 29, `${st.title}: 너무 긴 줄 '${line}'`);
+  }
+  // 안 읽은 이야기 먼저, 다 읽었으면 가장 오래전에 읽은 이야기
+  const all = Object.fromEntries(stage.stories.map((st, i) => [storyKey(st), 100 + i]));
+  assert.equal(pickStory(stage, all).title, stage.stories[0].title);
+  const { [storyKey(stage.stories[3])]: _, ...allBut3 } = all;
+  assert.equal(pickStory(stage, allBut3).title, stage.stories[3].title);
 });
 
 test('게임 낱말: 해 본 단계까지의 낱말 단계만', () => {

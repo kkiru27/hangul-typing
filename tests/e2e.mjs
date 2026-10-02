@@ -402,16 +402,19 @@ await openPage(page, 0);
 await selectStage(page, STAGES.findIndex((s) => s.type === 'long')); // 11단계 긴 글
 await page.keyboard.press('Enter');
 check(await page.locator('#story').isVisible() && (await text('#roundLabel')).startsWith('11단계'), '긴 글 화면');
-check((await text('#storyPrev')).includes('고구마 밭'), '첫 줄 위에 이야기 제목');
+const storyTitle0 = await text('#storyPrev');
+const stories = STAGES.find((st) => st.type === 'long').stories;
+const story = stories.find((st) => storyTitle0 === `📖 ${st.title}`);
+check(!!story, `첫 줄 위에 이야기 제목 (${storyTitle0})`);
 const storyNow = () => page.locator('#storyCur > span:not(.sent-enter)').evaluateAll((els) => els.map((el) => (el.classList.contains('sp') ? ' ' : el.textContent)).join(''));
 const l1 = await storyNow();
-check(l1 === '춘식이는 고구마를 아주 좋아하는 고양이예요.', `이야기 첫 줄 (${l1})`);
+check(l1 === story?.lines[0], `이야기 첫 줄 (${l1})`);
 for (const k of toKeys(l1)) await press(k);
 await page.waitForTimeout(300);
 await page.screenshot({ path: `${OUT}/17-story.png` });
 await page.keyboard.press('Enter');
 await page.waitForTimeout(100);
-check((await text('#storyPrev')) === l1 && (await storyNow()).startsWith('어느 날 아침'), 'Enter → 다음 줄, 앞 줄은 위로');
+check((await text('#storyPrev')) === l1 && (await storyNow()) === story?.lines[1], 'Enter → 다음 줄, 앞 줄은 위로');
 await exitViaPause(page);
 
 // ── 1분 타자 검정: 시계를 빨리 돌려 끝까지 ──

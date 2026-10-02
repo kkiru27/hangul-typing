@@ -2,20 +2,20 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js';
-import { InputBridge } from './input-bridge.js';
-import { KeyboardView } from './keyboard-view.js';
-import { HandsView } from './hands-view.js';
-import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, itemsForRound } from './lessons.js';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js';
-import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js';
-import { VERSION } from './version.js';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js';
-import { checkForUpdate } from './update-check.js';
-import { RainGame } from './game-rain.js';
-import { Sound } from './sound.js';
-import { loadSettings, saveSettings } from './settings.js';
+import { Judge } from './judge.js?v=202610021241';
+import { InputBridge } from './input-bridge.js?v=202610021241';
+import { KeyboardView } from './keyboard-view.js?v=202610021241';
+import { HandsView } from './hands-view.js?v=202610021241';
+import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js?v=202610021241';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610021241';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610021241';
+import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610021241';
+import { VERSION } from './version.js?v=202610021241';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202610021241';
+import { checkForUpdate } from './update-check.js?v=202610021241';
+import { RainGame } from './game-rain.js?v=202610021241';
+import { Sound } from './sound.js?v=202610021241';
+import { loadSettings, saveSettings } from './settings.js?v=202610021241';
 
 const $ = (id) => document.getElementById(id);
 
@@ -47,6 +47,7 @@ const state = {
   page: 'menu',        // 처음 화면(home)에서 보이는 곳: menu(갈래 고르기) | practice(단계 지도) | games(게임 목록)
   records: loadRecords(),
   seen: loadSeen(),    // 낱말·문장을 마지막으로 친 때 (덜 본 것 먼저)
+  story: null,         // 긴 글: 지금 치는 이야기 { title, lines }
   menuSel: 0,          // 갈래 고르기에서 고른 것 (0 타자 연습, 1 게임)
   sel: 0,              // 단계 지도에서 고른 단계
   gameSel: 0,          // 게임 목록에서 고른 게임
@@ -307,7 +308,8 @@ function startStage(i) {
   state.results = [];
   const type = state.stage.type;
   // 긴 글은 이야기 순서 그대로, 낱말은 덜 본 것 먼저, 짧은 글·검정은 새로 조립한 문장 + 덜 본 문장
-  state.itemOrder = type === 'long' ? [...state.stage.lines]
+  state.story = type === 'long' ? pickStory(state.stage, state.seen) : null;
+  state.itemOrder = type === 'long' ? [...state.story.lines]
     : type === 'words' ? freshOrder(stageItems(state.stage), state.seen)
       : type === 'sentences' || type === 'test' ? sentenceOrder(state.stage, state.seen) : [];
   state.testStart = 0;
@@ -330,7 +332,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021241';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -397,7 +399,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610021241';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -435,6 +437,7 @@ function showStageResult() {
   for (const r of rs) for (const [k, n] of Object.entries(r.missByKey)) miss[k] = (miss[k] || 0) + n;
   const cpm = hasSpeed() ? cpmOf(correct, rs.reduce((s, r) => s + r.ms, 0)) : null;
   const isTest = state.stage.type === 'test';
+  if (state.story) markSeen(state.seen, storyKey(state.story)); // 이 이야기는 다 읽음 → 다음엔 다른 이야기
   const saved = save(acc, cpm, isTest ? gogumaForTest(acc, cpm) : gogumaFor(acc));
 
   show('stageDone');
@@ -578,7 +581,7 @@ function startGame(i) {
   $('roundLabel').textContent = gameTitle(stage);
   $('stageLabel').textContent = gameTitle(stage);
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021241';
   show('game');
   gameCs.pose('stand');
   gameCs.say('츈츈! (떨어지는 고구마를 잡아 줘!)');
@@ -982,8 +985,8 @@ function renderSentence() {
 function renderStory() {
   const { stage, roundIdx, itemIdx } = state;
   const at = stage.rounds.slice(0, roundIdx).reduce((n, r) => n + r.count, 0) + itemIdx;
-  const lines = stage.lines;
-  $('storyPrev').textContent = at > 0 ? lines[at - 1] : `📖 ${stage.preview}`;
+  const { lines } = state.story;
+  $('storyPrev').textContent = at > 0 ? lines[at - 1] : `📖 ${state.story.title}`;
   $('storyCur').innerHTML = lineHtml();
   $('storyNext').innerHTML = lines.slice(at + 1, at + 3).map(escapeHtml).join('<br>') || '이야기의 마지막 줄이에요';
 }

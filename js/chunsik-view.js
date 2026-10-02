@@ -2,9 +2,9 @@
 // 흰 배경은 tools/cutout.py로 가장자리에서만 지웠다 (코·베개·눈 반짝임·눈물은 보존).
 
 export const POSES = {
-  stand: 'img/chunsik.png',
-  goguma: 'img/chunsik-goguma.png',
-  sad: 'img/chunsik-sad.png',
+  stand: 'img/chunsik.png?v=202610021241',
+  goguma: 'img/chunsik-goguma.png?v=202610021241',
+  sad: 'img/chunsik-sad.png?v=202610021241',
 };
 
 // 고구마 (직접 그린 그림)

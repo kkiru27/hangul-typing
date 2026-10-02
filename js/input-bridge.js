@@ -6,7 +6,7 @@
 // 조합 중에 입력칸 값을 코드로 고치면 iOS에서 글자가 겹쳐 들어가는 문제가 있어서,
 // 값을 비우는 일은 조합 중이 아닐 때만 한다. 조합 중이면 "여기서부터 새 판" 위치(base)만 옮긴다.
 
-import { toKeys } from './hangul.js';
+import { toKeys } from './hangul.js?v=202610021241';
 
 const LATIN_G = /[A-Za-z]/g;
 
