@@ -64,15 +64,6 @@ export function suggestStage(stages, records) {
   return (records[stages[last].id].goguma ?? 0) > 0 ? Math.min(last + 1, stages.length - 1) : last;
 }
 
-// 게임(고구마 비)에 떨어뜨릴 낱말 단계: 끝내 본 단계 중 가장 뒤 단계까지의 낱말 단계.
-// 아직 앞쪽만 해 봤으면 첫 낱말 단계만 (처음 온 사람에게 안 배운 자리의 낱말이 떨어지지 않게)
-export function gameWordStages(stages, records) {
-  const reach = Math.max(-1, ...stages.map((s, i) => (s.type !== 'game' && records[s.id]?.plays ? i : -1)));
-  const all = stages.filter((s) => s.type === 'words');
-  const upTo = all.filter((s) => stages.indexOf(s) <= reach);
-  return upTo.length ? upTo : all.slice(0, 1);
-}
-
 // 낱말·문장을 마지막으로 친 때 (덜 본 것 먼저 내려고). 기록과 따로 저장, 너무 많아지면 오래된 것부터 버린다
 const SEEN_KEY = 'hangul-typing:seen:v1';
 export const SEEN_MAX = 800;
@@ -94,6 +85,34 @@ export function markSeen(seen, text, now = Date.now()) {
     for (const k of keys.slice(0, keys.length - SEEN_MAX * 0.75)) delete seen[k];
   }
   try { localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); } catch { /* 저장 못 해도 진행 */ }
+}
+
+// ───── 게임: 레벨마다 기록 (id = 게임id:레벨) ─────
+export const levelId = (game, n) => `${game.id}:${n}`;
+const levelGoguma = (game, n, records) => records[levelId(game, n)]?.goguma ?? 0;
+
+export function gameGoguma(game, records) {
+  return game.levels.reduce((sum, _, i) => sum + levelGoguma(game, i + 1, records), 0);
+}
+
+export function gamesMax(games) {
+  return games.reduce((sum, g) => sum + g.levels.length * GOGUMA_MAX, 0);
+}
+
+// 레벨 1은 늘 열림. 레벨 n은 레벨 n-1에서 고구마를 받았거나 이미 고구마를 받은 적이 있으면 열림
+export function isLevelOpen(game, n, records) {
+  return n === 1 || levelGoguma(game, n - 1, records) > 0 || levelGoguma(game, n, records) > 0;
+}
+
+// 게임: 모은 고구마(연습+게임)가 unlock개 이상이면 열림
+export function isGameOpen(game, total) {
+  return total >= (game.unlock ?? 0);
+}
+
+// 게임을 고르면 골라 둘 레벨: 열린 레벨 중 고구마를 다 못 모은 첫 레벨, 다 모았으면 열린 마지막 레벨
+export function suggestLevel(game, records) {
+  const open = game.levels.map((_, i) => i + 1).filter((n) => isLevelOpen(game, n, records));
+  return open.find((n) => levelGoguma(game, n, records) < GOGUMA_MAX) ?? open.at(-1);
 }
 
 export function totalGoguma(stages, records) {

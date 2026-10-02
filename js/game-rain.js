@@ -1,16 +1,19 @@
 // 고구마 비: 낱말이 적힌 고구마가 떨어진다. 낱말을 치고 스페이스바(또는 Enter)를 누르면 춘식이가 먹는다.
 // 초보용: 게임 오버 없음, 천천히 떨어지고, 한 화면에 최대 3개.
 
-import { toKeys } from './hangul.js?v=202610021241';
-import { GOGUMA_SVG } from './chunsik-view.js?v=202610021241';
+import { toKeys } from './hangul.js';
+import { GOGUMA_SVG } from './chunsik-view.js';
 
 const lerp = (a, b, t) => a + (b - a) * Math.min(1, Math.max(0, t));
 
 export class RainGame {
-  constructor(field, { words, total = 12, maxActive = 3, onSpawn, onCatch, onMiss, onEnd, rand = Math.random }) {
+  // fall: 떨어지는 데 걸리는 시간 [처음, 끝](ms), gap: 다음 고구마까지 [처음, 끝](ms) — 판이 갈수록 빨라진다
+  constructor(field, { words, total = 12, maxActive = 3, fall = [16000, 10000], gap = [5200, 3600], onSpawn, onCatch, onMiss, onEnd, rand = Math.random }) {
     this.field = field;
     this.total = total;
     this.maxActive = maxActive;
+    this.fall = fall;
+    this.gap = gap;
     this.onSpawn = onSpawn;
     this.onCatch = onCatch;
     this.onMiss = onMiss;
@@ -77,14 +80,14 @@ export class RainGame {
       keys: toKeys(word),
       el,
       born: this.t,
-      dur: lerp(16000, 10000, progress), // 점점 빨라진다
+      dur: lerp(this.fall[0], this.fall[1], progress), // 점점 빨라진다
       x: this.#pickX(el.offsetWidth),
       y: 0,
       h: el.offsetHeight,
     };
     this.drops.push(drop);
     this.spawned++;
-    this.nextSpawnAt = this.t + lerp(5200, 3600, progress);
+    this.nextSpawnAt = this.t + lerp(this.gap[0], this.gap[1], progress);
     this.onSpawn?.(drop);
   }
 

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
-import { markSeen, SEEN_MAX, gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
+import { markSeen, SEEN_MAX, gogumaFor, gogumaForTest, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from '../js/lessons.js';
+import { STAGES, GAMES, LEVEL_RANGES, levelKeys, levelWords, gameLevel, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, LAYOUTS, LAYOUT_IDS, DEFAULT_LAYOUT, getLayout, layoutKeys } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 import { makeSentence, makeSentences, MAX_LEN, SUBJECTS, SCENES, WITH } from '../js/sentence-maker.js';
@@ -160,9 +160,10 @@ test('단계 순서와 제목 (게임은 연습 단계와 따로)', () => {
   assert.equal(stageTitle(1), '2단계 · 기본자리 낱말');
   assert.equal(stageTitle(2), '3단계 · 왼손 윗줄');
   assert.ok(STAGES.every((s) => s.type !== 'game'), '연습 단계에 게임 없음');
-  assert.ok(GAMES.length && GAMES.every((g) => g.type === 'game' && g.total > 0 && g.name && g.tip), '게임 목록');
+  assert.ok(GAMES.length && GAMES.every((g) => ['rain', 'dig', 'race'].includes(g.type) && g.levels.length && g.name && g.tip), '게임 목록');
   assert.ok(GAMES.every((g) => !STAGES.some((s) => s.id === g.id)), '게임 id는 단계 id와 겹치지 않음 (기록을 같이 씀)');
-  assert.equal(gameTitle(GAMES[0]), '게임 · 고구마 비');
+  assert.equal(gameTitle(GAMES.find((g) => g.id === 'game-rain')), '게임 · 고구마 비');
+  assert.equal(new Set(GAMES.map((g) => g.id)).size, GAMES.length);
   const at = (id) => stageTitle(STAGES.findIndex((s) => s.id === id));
   assert.equal(at('keys-number'), '9단계 · 숫자·부호');
   assert.equal(at('sentences-1'), '10단계 · 짧은 글');
@@ -188,16 +189,47 @@ test('긴 글은 이야기 순서대로 판마다 이어짐', () => {
   assert.equal(pickStory(stage, allBut3).title, stage.stories[3].title);
 });
 
-test('게임 낱말: 해 본 단계까지의 낱말 단계만', () => {
-  const idx = (id) => STAGES.findIndex((s) => s.id === id);
-  const words = STAGES.filter((s) => s.type === 'words');
-  const ids = (rec) => gameWordStages(STAGES, rec).map((s) => s.id);
-  assert.deepEqual(ids({}), [words[0].id]);                                   // 처음: 첫 낱말 단계만
-  assert.deepEqual(ids({ 'keys-home': { plays: 1 } }), [words[0].id]);        // 1단계만 해 봄
-  assert.deepEqual(ids({ 'game-rain': { plays: 3 } }), [words[0].id]);        // 게임만 해 본 건 안 셈
-  // Shift 단계까지 해 봄 → 그 앞의 낱말 단계들 (Shift 글자가 든 '모든 자리 낱말'은 빠짐)
-  assert.deepEqual(ids({ 'keys-shift': { plays: 1 } }), words.filter((w) => STAGES.indexOf(w) < idx('keys-shift')).map((w) => w.id));
-  assert.deepEqual(ids({ 'test-1min': { plays: 1 } }), words.map((w) => w.id)); // 검정까지 해 봤으면 모든 낱말
+test('게임 레벨: 쓰는 키 범위가 점점 넓어지고, 낱말은 그 키로만', () => {
+  assert.equal(LEVEL_RANGES.length, 5);
+  assert.deepEqual(new Set(levelKeys(1)), new Set('ㅁㄴㅇㄹㅎㅗㅓㅏㅣ'));
+  for (let n = 2; n <= 5; n++) {
+    const prev = new Set(levelKeys(n - 1));
+    assert.ok([...prev].every((k) => levelKeys(n).includes(k)), `레벨 ${n}은 레벨 ${n - 1} 키를 다 포함`);
+    const prevWords = new Set(levelWords(n - 1));
+    assert.ok([...prevWords].every((w) => levelWords(n).includes(w)), `레벨 ${n} 낱말은 앞 레벨 낱말을 다 포함`);
+  }
+  for (let n = 1; n <= 5; n++) {
+    const keys = new Set(levelKeys(n));
+    assert.ok(levelWords(n).length >= 40, `레벨 ${n} 낱말이 충분히 많음`);
+    for (const w of levelWords(n)) assert.ok(toKeys(w).every((k) => keys.has(k)), `레벨 ${n}: ${w}`);
+  }
+  assert.ok(!levelKeys(3).some((k) => 'ㅃㅉㄸㄲㅆㅒㅖ'.includes(k)), '레벨 3은 아직 Shift 없음');
+  assert.ok(levelWords(4).includes('딸기') && !levelWords(3).includes('딸기'));
+  for (const g of GAMES) {
+    assert.equal(g.levels.length, LEVEL_RANGES.length, g.id);
+    assert.ok(g.name && g.tip && g.preview && g.type && typeof g.unlock === 'number', g.id);
+    for (let n = 1; n <= 5; n++) assert.ok(gameLevel(g, n).name && gameLevel(g, n).desc, `${g.id} 레벨 ${n}`);
+  }
+  assert.ok(GAMES.some((g) => g.unlock === 0), '처음부터 열린 게임이 하나는 있음');
+});
+
+test('게임 잠금: 모은 고구마로 게임, 앞 레벨 고구마로 다음 레벨', () => {
+  const g = GAMES[0];
+  const rec = {};
+  assert.ok(isLevelOpen(g, 1, rec) && !isLevelOpen(g, 2, rec));
+  assert.equal(suggestLevel(g, rec), 1);
+  saveStageResult(rec, levelId(g, 1), 0.5); // 고구마 0개
+  assert.ok(!isLevelOpen(g, 2, rec));
+  saveStageResult(rec, levelId(g, 1), 0.9); // 2개
+  assert.ok(isLevelOpen(g, 2, rec) && !isLevelOpen(g, 3, rec));
+  assert.equal(suggestLevel(g, rec), 1, '레벨 1 고구마를 다 모을 때까지는 레벨 1');
+  saveStageResult(rec, levelId(g, 1), 1);
+  assert.equal(suggestLevel(g, rec), 2);
+  assert.equal(gameGoguma(g, rec), 3);
+  assert.equal(gamesMax([g]), 15);
+  // 레벨 순서를 넘겨 이미 받은 레벨은 열린 채로
+  assert.ok(isLevelOpen(g, 4, { [levelId(g, 4)]: { goguma: 1 } }));
+  assert.ok(isGameOpen({ unlock: 6 }, 6) && !isGameOpen({ unlock: 6 }, 5) && isGameOpen({ unlock: 0 }, 0));
 });
 
 test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () => {

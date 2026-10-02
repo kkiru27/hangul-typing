@@ -450,45 +450,58 @@ await page3.waitForTimeout(800);
 await page3.screenshot({ path: `${OUT}/18-test-result.png` });
 await page3.close();
 
-// ── 게임: 고구마 비 ──
+// ── 게임: 목록 → 레벨 → 고구마 비 ──
 await page.goto(`${BASE}/index.html`);
 resetIme();
 await page.keyboard.press('ArrowRight');
 check((await text('.menu-card.selected')).includes('게임') && (await text('#homeChunsik .cs-bubble')).includes('게임 하러'), '처음 화면에서 → 로 게임 고르기');
 await page.keyboard.press('Enter');
 check(await pageOf(page) === 'games' && (await text('#stageLabel')).includes('게임'), 'Enter → 게임 목록');
-check(await page.locator('.stage-card').count() === 1 && (await text('.stage-card.selected')).includes('고구마 비'), '게임 목록: 고구마 비');
-check((await text('.stage-card.selected')).includes('기본자리 낱말까지'), '카드에 떨어지는 낱말 범위 (1단계만 했으면 기본자리 낱말까지)');
+// 고구마 비 카드 고르기
+const rainIdx = await page.locator('.game-card').evaluateAll((els) => els.findIndex((el) => el.textContent.includes('고구마 비')));
+for (let i = 0; i < rainIdx; i++) await page.keyboard.press('ArrowRight');
+check(rainIdx >= 0 && (await text('.stage-card.selected')).includes('고구마 비') && (await text('.stage-card.selected')).includes('레벨 1/5'), '게임 목록: 고구마 비 (레벨 1/5)');
 await page.waitForTimeout(300);
 await page.screenshot({ path: `${OUT}/19-games.png` });
 await page.keyboard.press('Enter');
-check(await page.locator('#gameScreen').isVisible(), '게임 화면');
+check(await pageOf(page) === 'levels' && await page.locator('.stage-card').count() === 5 && await page.locator('.stage-card.locked').count() === 4
+  && (await text('.stage-card.selected')).includes('레벨 1') && (await text('#navBtn')).includes('게임 목록'), 'Enter → 레벨 목록 (레벨 1만 열림, 뒤로 단추는 게임 목록)');
+await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter');
+check(await pageOf(page) === 'levels' && await lastSound() === 'warn' && (await text('#homeChunsik .cs-bubble')).includes('레벨 1에서'), '잠긴 레벨은 시작 안 됨 (흔들고 안내)');
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/23-levels.png` });
+await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Enter');
+check(await page.locator('#gameScreen').isVisible() && (await text('#roundLabel')).includes('레벨 1'), '레벨 1 시작');
 await page.waitForTimeout(900);
 check(await page.locator('.drop').count() >= 1, '고구마가 떨어지기 시작');
 const homeWords = Object.keys(STAGES.find((s) => s.type === 'words').words);
 const dropWords = await page.locator('.drop .drop-word').allInnerTexts();
-check(dropWords.every((w) => homeWords.includes(w)), `1단계만 해 봤으면 기본자리 낱말만 떨어짐 (${dropWords.join(',')})`);
+check(dropWords.every((w) => homeWords.includes(w)), `레벨 1은 기본자리 낱말만 (${dropWords.join(',')})`);
 const cs = await page.locator('#gameChunsik').boundingBox();
 const field = await page.locator('#rain').boundingBox();
 check(cs.y + cs.height > field.y + field.height - 40, '게임 춘식이는 땅 위(아래쪽)에');
-const g1 = await text('.drop.focus .drop-word');
-for (const k of toKeys(g1)) await press(k);
-await press(' ');
-await page.waitForTimeout(100);
-check((await text('#progress')) === '1/12', `낱말(${g1}) + 스페이스 → 고구마 잡음`);
+// 가장 아래(초점) 고구마의 낱말을 치고 스페이스(또는 Enter)
+const catchFocus = async (useEnter = false) => {
+  await page.locator('.drop.focus:not(.caught):not(.missed)').waitFor({ timeout: 15000 });
+  const w = await text('.drop.focus .drop-word');
+  for (const k of toKeys(w)) await press(k);
+  if (useEnter) { await commit(); await page.keyboard.press('Enter'); } else await press(' ');
+  await page.waitForTimeout(150);
+  return w;
+};
+const g1 = await catchFocus();
+check((await text('#progress')) === '1/10', `낱말(${g1}) + 스페이스 → 고구마 잡음`);
 check((await page.locator('#gameChunsik').getAttribute('data-pose')) === 'goguma', '잡으면 고구마 먹는 춘식이');
 check(await lastSound() === 'catch', '잡으면 "뿅" 소리');
+resetIme();
+const g2 = await catchFocus(true);
+check((await text('#progress')) === '2/10', `Enter로도 잡음 (${g2})`);
+check(await page.locator('#gameCombo').isVisible() && (await text('#gameCombo')).includes('2 콤보'), '연달아 잡으면 2 콤보');
+resetIme();
 await press('ㅋ'); await press(' ');
-check((await text('#gameChunsik .cs-bubble')).includes('없어'), '없는 낱말 → 춘식이 안내');
-await page.waitForTimeout(4500);
-const g2 = await text('.drop.focus .drop-word');
-for (const k of toKeys(g2)) await press(k);
-await commit();
-await page.keyboard.press('Enter');
-await page.waitForTimeout(150);
-check((await text('#progress')) === '2/12', `Enter로도 잡음 (${g2})`);
+check((await text('#gameChunsik .cs-bubble')).includes('없어') && await page.locator('#gameCombo').isHidden(), '없는 낱말 → 춘식이 안내, 콤보 끊김');
 const live = page.locator('.drop:not(.caught):not(.missed)').first();
-await live.waitFor({ timeout: 10000 }); // 경고 중에는 새 고구마도 안 나오므로, 고구마가 있을 때 시험
+await live.waitFor({ timeout: 15000 }); // 경고 중에는 새 고구마도 안 나오므로, 고구마가 있을 때 시험
 await page.keyboard.type('a');
 check(await page.locator('#gameBanner').isVisible(), '게임 중 영어 경고');
 const yBefore = await live.evaluate((el) => el.style.transform);
@@ -502,18 +515,18 @@ await press('ㅁ'); await press('Backspace');
 check(!(await page.locator('#gameBanner').isVisible()), '한글 치면 경고 사라지고 다시 움직임');
 // 게임 일시정지: 고구마가 멈추고, 처음부터 다시 / 나가기
 const live2 = page.locator('.drop:not(.caught):not(.missed)').first();
-await live2.waitFor({ timeout: 10000 });
+await live2.waitFor({ timeout: 15000 });
 await page.keyboard.press('Escape');
 const y1 = await live2.evaluate((el) => el.style.transform);
 await page.waitForTimeout(600);
 check(await page.locator('#pauseLayer').isVisible() && y1 === await live2.evaluate((el) => el.style.transform), '게임 일시정지 → 고구마가 멈춤');
-check((await text('.pause-item[data-act="exit"]')).includes('게임 고르기'), '게임에서 나가기는 게임 고르기로');
+check((await text('.pause-item[data-act="exit"]')).includes('레벨 고르기'), '게임에서 나가기는 레벨 고르기로');
 await page.waitForTimeout(200);
 await page.screenshot({ path: `${OUT}/21-game-pause.png` });
 await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
-check((await text('#progress')) === '0/12' && await page.locator('#pauseLayer').isHidden() && await page.locator('.drop.caught').count() === 0, '게임 처음부터 다시 → 0/12, 떨어지던 고구마 치움');
+check((await text('#progress')) === '0/10' && await page.locator('#pauseLayer').isHidden() && await page.locator('.drop.caught').count() === 0, '게임 처음부터 다시 → 0/10, 떨어지던 고구마 치움');
 await exitViaPause(page);
-check(await pageOf(page) === 'games' && await page.locator('.drop').count() === 0, '나가기 → 게임 끝내고 게임 목록');
+check(await pageOf(page) === 'levels' && await page.locator('.drop').count() === 0, '나가기 → 게임 끝내고 레벨 목록');
 
 // 게임 끝까지: 시계를 빨리 돌려 모두 놓치기 → 결과
 const page2 = await browser.newPage({ viewport: { width: W, height: H } });
@@ -521,17 +534,20 @@ page2.on('pageerror', (e) => errors.push(String(e)));
 await page2.clock.install();
 await page2.goto(`${BASE}/index.html`);
 await openPage(page2, 1);
-await page2.keyboard.press('Enter');
-await page2.clock.runFor(100000);
+const rainIdx2 = await page2.locator('.game-card').evaluateAll((els) => els.findIndex((el) => el.textContent.includes('고구마 비')));
+for (let i = 0; i < rainIdx2; i++) await page2.keyboard.press('ArrowRight');
+await page2.keyboard.press('Enter'); // 레벨 목록
+await page2.keyboard.press('Enter'); // 레벨 1
+await page2.clock.runFor(150000);
 await page2.clock.runFor(2000);
 check(await page2.locator('#resultScreen').isVisible(), '게임 끝 → 결과 화면');
-check((await page2.locator('#resultAcc').innerText()) === '0 / 12' && (await page2.locator('#resultAccLabel').innerText()) === '잡은 고구마', '결과: 잡은 고구마 0 / 12');
+check((await page2.locator('#resultAcc').innerText()) === '0 / 10' && (await page2.locator('#resultAccLabel').innerText()) === '잡은 고구마', '결과: 잡은 고구마 0 / 10');
 check((await page2.locator('#resultNote').innerText()).includes('70%'), '못 잡으면 안내');
-check((await page2.locator('#resultNext').innerText()) === '게임 고르기', '게임 결과: Enter → 게임 고르기');
+check((await page2.locator('#resultNext').innerText()) === '레벨 고르기', '게임 결과: Enter → 레벨 고르기');
 await page2.waitForTimeout(800);
 await page2.screenshot({ path: `${OUT}/15-game-result.png` });
 await page2.keyboard.press('Enter');
-check(await page2.locator('#homeScreen').getAttribute('data-page') === 'games', '게임 결과에서 Enter → 게임 목록');
+check(await page2.locator('#homeScreen').getAttribute('data-page') === 'levels', '게임 결과에서 Enter → 레벨 목록');
 await page2.close();
 
 check(errors.length === 0, `콘솔 오류 없음 ${errors.join(' / ')}`);

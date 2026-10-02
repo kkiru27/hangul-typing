@@ -90,6 +90,12 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   cursor: pointer;
   transition: transform .12s, box-shadow .12s, border-color .12s;
 }
+.stage-card.locked { background: #f4efe8; color: #b3a59b; }
+.stage-card.locked .sc-num, .stage-card.locked .gc-meta { color: #b3a59b; }
+.stage-card.shake { animation: shake-x .35s; }
+.sc-lock { position: absolute; right: 10px; top: 8px; font-size: 18px; }
+.gc-meta { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.gc-meta .goguma { width: 22px; }
 .stage-card.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 122, 89, .22); transform: translateY(-3px); }
 @keyframes shake-x { 25% { translate: -5px 0; } 50% { translate: 5px 0; } 75% { translate: -3px 0; } }
 .sc-num { font-size: 13px; font-weight: 800; color: var(--accent); }
@@ -287,6 +293,15 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .rain-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: #c79a67; border-top: 4px solid #9a7247; }
 /* 공용 .chunsik.cs-m(position: relative)보다 우선해야 해서 선택자를 길게 */
 .rain .game-chunsik.chunsik { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 2; --cs-h: 84px; }
+/* 콤보: 연달아 잡으면 오른쪽 위에 */
+.game-combo {
+  position: absolute; top: 10px; right: 14px; z-index: 3;
+  padding: 4px 14px; border-radius: 999px;
+  background: #fff1ea; border: 2.5px solid var(--accent); color: var(--accent);
+  font-size: 22px; font-weight: 900;
+}
+.game-combo[hidden] { display: none; }
+.game-combo.pop { animation: pop .3s ease-out; }
 .game-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 3; white-space: nowrap; }
 .drop { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; will-change: transform; z-index: 1; }
 .drop .goguma { width: 60px; display: block; }

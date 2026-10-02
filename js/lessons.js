@@ -14,8 +14,8 @@
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js?v=202610021241';
-import { makeSentences } from './sentence-maker.js?v=202610021241';
+import { toKeys } from './hangul.js';
+import { makeSentences } from './sentence-maker.js';
 
 // 낱말 → 그림 (그림이 없으면 빈칸). 주제별로 모아 적고, 판에서는 섞어서 낸다 (덜 본 낱말 먼저: app.js freshOrder)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말. ㅘ(ㅗ+ㅏ)·ㅚ(ㅗ+ㅣ)도 이 키로 칠 수 있다. 이 자리로 되는 낱말은 원래 많지 않다
@@ -406,18 +406,52 @@ export const STAGES = [
   },
 ];
 
-// 게임: 연습으로 실력을 키운 뒤 노는 곳 (처음 화면에서 '게임'을 고르면 나오는 목록). 기록은 단계와 같이 id로 저장
+// ───── 게임 ─────
+// 레벨 = 쓰는 키 범위(연습 순서대로) × 빠르기 × 개수. 레벨 n은 레벨 n-1에서 고구마를 1개라도 받으면 열린다 (records.js isLevelOpen)
+// 게임 자체는 모은 고구마(연습+게임, 쓰지 않고 쌓이기만 함)가 unlock개 이상이면 열린다 (records.js isGameOpen)
+export const LEVEL_RANGES = [
+  { name: '기본자리', upTo: 'keys-home' },
+  { name: '윗줄까지', upTo: 'keys-top-right' },
+  { name: '아랫줄까지', upTo: 'keys-bottom' },
+  { name: 'Shift까지', upTo: 'keys-shift' },
+  { name: '모든 글자 빠르게', upTo: 'keys-shift' },
+];
+
 export const GAMES = [
   {
-    id: 'game-rain',
-    group: '게임',
-    name: '고구마 비',
-    type: 'game',
+    id: 'game-rain', type: 'rain', group: '게임', name: '고구마 비', unlock: 0,
     preview: '🍠 떨어지는 낱말 잡기',
-    tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요.',
-    total: 12,
+    tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요. 연달아 잡으면 콤보!',
+    // fall: 떨어지는 데 걸리는 시간(처음 → 끝, ms), gap: 다음 고구마까지(처음 → 끝), max: 한 번에 떠 있는 개수
+    levels: [
+      { desc: '천천히 떨어져요', total: 10, max: 2, fall: [18000, 13000], gap: [6000, 4500] },
+      { desc: '조금 빨리', total: 12, max: 3, fall: [16000, 11000], gap: [5200, 3800] },
+      { desc: '보통 빠르기', total: 14, max: 3, fall: [15000, 10000], gap: [4800, 3400] },
+      { desc: '빨리', total: 15, max: 3, fall: [14000, 9000], gap: [4500, 3000] },
+      { desc: '아주 빨리!', total: 18, max: 4, fall: [12000, 7500], gap: [4000, 2600] },
+    ],
   },
 ];
+
+// 레벨 n에서 쓰는 자모 (그 범위까지의 자리 연습 단계 글자)
+export function levelKeys(n) {
+  const end = STAGES.findIndex((s) => s.id === LEVEL_RANGES[n - 1].upTo);
+  const set = new Set();
+  for (const s of STAGES.slice(0, end + 1)) if (s.type === 'keys') for (const ch of stageChars(s)) set.add(ch);
+  return [...set];
+}
+
+// 레벨 n에서 쓰는 낱말: 낱말 단계의 모든 낱말 중 그 레벨 자모로만 칠 수 있는 것
+export function levelWords(n) {
+  const keys = new Set(levelKeys(n));
+  const all = new Set(STAGES.filter((s) => s.type === 'words').flatMap((s) => Object.keys(s.words)));
+  return [...all].filter((w) => toKeys(w).every((k) => keys.has(k)));
+}
+
+// 레벨 정보: 번호 · 범위 이름 · 게임별 값
+export function gameLevel(game, n) {
+  return { n, ...LEVEL_RANGES[n - 1], ...game.levels[n - 1] };
+}
 
 // 입력기에 따라 합쳐질 수 있는 짝. 자리 연습에서는 나란히 두지 않는다.
 //  - 모음: ㅏ+ㅣ→ㅐ 처럼 묶는 입력기가 있다

@@ -2,20 +2,20 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js?v=202610021241';
-import { InputBridge } from './input-bridge.js?v=202610021241';
-import { KeyboardView } from './keyboard-view.js?v=202610021241';
-import { HandsView } from './hands-view.js?v=202610021241';
-import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js?v=202610021241';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610021241';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610021241';
-import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610021241';
-import { VERSION } from './version.js?v=202610021241';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202610021241';
-import { checkForUpdate } from './update-check.js?v=202610021241';
-import { RainGame } from './game-rain.js?v=202610021241';
-import { Sound } from './sound.js?v=202610021241';
-import { loadSettings, saveSettings } from './settings.js?v=202610021241';
+import { Judge } from './judge.js';
+import { InputBridge } from './input-bridge.js';
+import { KeyboardView } from './keyboard-view.js';
+import { HandsView } from './hands-view.js';
+import { STAGES, GAMES, gameLevel, levelKeys, levelWords, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js';
+import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js';
+import { VERSION } from './version.js';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js';
+import { checkForUpdate } from './update-check.js';
+import { RainGame } from './game-rain.js';
+import { Sound } from './sound.js';
+import { loadSettings, saveSettings } from './settings.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -44,13 +44,17 @@ const MAP_PAGE = 6; // 단계 지도 한 쪽에 보이는 단계 수
 
 const state = {
   screen: 'home',      // home | play | game | roundDone | stageDone
-  page: 'menu',        // 처음 화면(home)에서 보이는 곳: menu(갈래 고르기) | practice(단계 지도) | games(게임 목록)
+  page: 'menu',        // 처음 화면(home)에서 보이는 곳: menu(갈래 고르기) | practice(단계 지도) | games(게임 목록) | levels(게임 레벨)
   records: loadRecords(),
   seen: loadSeen(),    // 낱말·문장을 마지막으로 친 때 (덜 본 것 먼저)
   story: null,         // 긴 글: 지금 치는 이야기 { title, lines }
   menuSel: 0,          // 갈래 고르기에서 고른 것 (0 타자 연습, 1 게임)
   sel: 0,              // 단계 지도에서 고른 단계
   gameSel: 0,          // 게임 목록에서 고른 게임
+  levelSel: 0,         // 레벨 목록에서 고른 레벨 (0부터)
+  level: null,         // 게임 중이면 지금 레벨 (lessons.js gameLevel)
+  combo: 0,            // 게임: 연달아 잡은 수
+  bestCombo: 0,
   stageIdx: 0,
   stage: STAGES[0],
   roundIdx: 0,
@@ -113,14 +117,18 @@ function goHome(page = state.page) {
 function goBack() {
   if (state.screen !== 'home' || state.page === 'menu') return;
   sound.play('move');
-  goHome('menu');
+  goHome(state.page === 'levels' ? 'games' : 'menu');
 }
+
+// 모은 고구마: 연습 단계 + 게임 레벨 (게임을 여는 기준)
+const allGoguma = () => totalGoguma(STAGES, state.records) + GAMES.reduce((sum, g) => sum + gameGoguma(g, state.records), 0);
+const allMax = () => STAGES.length * GOGUMA_MAX + gamesMax(GAMES);
 
 function renderHome() {
   const { page } = state;
   $('homeScreen').dataset.page = page;
   $('stageMap').style.setProperty('--cols', page === 'games' ? Math.min(MAP_COLS, GAMES.length) : MAP_COLS);
-  $('stageLabel').textContent = page === 'practice' ? '⌨️ 타자 연습' : page === 'games' ? '🎮 게임' : '';
+  $('stageLabel').textContent = { practice: '⌨️ 타자 연습', games: '🎮 게임', levels: `🎮 ${GAMES[state.gameSel].name}` }[page] || '';
   setNav(page === 'menu' ? null : 'back');
   $('homeHint').innerHTML = page === 'menu'
     ? '<kbd>← → ↑ ↓</kbd> 로 고르고 <kbd>Enter ⏎</kbd>'
@@ -128,6 +136,7 @@ function renderHome() {
   $('homeSettings').hidden = page !== 'menu';
   if (page === 'practice') renderMap();
   else if (page === 'games') renderGames();
+  else if (page === 'levels') renderLevels();
   else renderMenu();
 }
 
@@ -136,7 +145,8 @@ function setNav(kind) {
   $('brand').hidden = !!kind;
   $('navBtn').hidden = !kind;
   $('navBtn').dataset.kind = kind || '';
-  $('navBtn').innerHTML = { pause: '⏸ 멈춤', resume: '▶ 계속하기', back: '← 처음으로' }[kind] + ' <kbd>Esc</kbd>';
+  const back = state.page === 'levels' ? '← 게임 목록' : '← 처음으로';
+  $('navBtn').innerHTML = { pause: '⏸ 멈춤', resume: '▶ 계속하기', back }[kind] + ' <kbd>Esc</kbd>';
 }
 
 function gogumaIcons(n, cls = '') {
@@ -189,12 +199,12 @@ function chooseSetting(id) {
 
 function renderMenu() {
   const practice = totalGoguma(STAGES, state.records);
-  const games = totalGoguma(GAMES, state.records);
-  $('mapTotal').innerHTML = `${GOGUMA_SVG} 모은 고구마 ${practice + games} / ${(STAGES.length + GAMES.length) * GOGUMA_MAX}`;
+  const games = allGoguma() - practice;
+  $('mapTotal').innerHTML = `${GOGUMA_SVG} 모은 고구마 ${practice + games} / ${allMax()}`;
   const played = STAGES.some((st) => state.records[st.id]);
   const meta = [
     `${GOGUMA_SVG} ${practice} / ${STAGES.length * GOGUMA_MAX}${played ? ` · 이어서: ${stageTitle(state.sel)}` : ''}`,
-    `${GOGUMA_SVG} ${games} / ${GAMES.length * GOGUMA_MAX} · ${GAMES.map((g) => g.name).join(' · ')}`,
+    `${GOGUMA_SVG} ${games} / ${gamesMax(GAMES)} · 게임 ${GAMES.length}개`,
   ];
   $('stageMap').innerHTML = MENU.map((m, i) => `<div class="stage-card menu-card ${i === state.menuSel ? 'selected' : ''}" data-idx="${i}">
       <span class="mc-icon">${m.icon}</span>
@@ -232,16 +242,61 @@ function renderMap() {
   else homeCs.say(`춘춘? (${s.name} 해 볼까?)`);
 }
 
-// 게임 목록. 떨어지는 낱말은 연습에서 해 본 단계까지 (카드에 어디까지인지 보여 준다)
+// 게임 목록: 모은 고구마로 열리는 게임 (잠긴 게임은 몇 개 더 모아야 하는지)
 function renderGames() {
-  const total = totalGoguma(GAMES, state.records);
-  $('mapTotal').innerHTML = `${GOGUMA_SVG} 게임 고구마 ${total} / ${GAMES.length * GOGUMA_MAX}`;
-  const words = gameWordStages(STAGES, state.records).at(-1);
-  $('stageMap').innerHTML = GAMES.map((g, i) => cardHtml(g, i, `게임 ${i + 1}`, i === state.gameSel, `🍠 낱말: ${words.name}까지`)).join('');
+  const total = allGoguma();
+  $('mapTotal').innerHTML = `${GOGUMA_SVG} 모은 고구마 ${total}개`;
+  $('stageMap').innerHTML = GAMES.map((g, i) => {
+    const open = isGameOpen(g, total);
+    const levels = g.levels.filter((_, k) => isLevelOpen(g, k + 1, state.records)).length;
+    const meta = open
+      ? `레벨 ${levels}/${g.levels.length} · ${GOGUMA_SVG} ${gameGoguma(g, state.records)} / ${g.levels.length * GOGUMA_MAX}`
+      : `고구마 ${g.unlock - total}개 더 모으면 열려요`;
+    return `<div class="stage-card game-card ${open ? '' : 'locked'} ${i === state.gameSel ? 'selected' : ''}" data-idx="${i}">
+      <span class="sc-num">게임 ${i + 1}</span>
+      <span class="sc-name">${g.name}</span>
+      <span class="sc-keys">${g.preview}</span>
+      <span class="gc-meta">${meta}</span>
+      ${open ? '' : '<span class="sc-lock">🔒</span>'}
+    </div>`;
+  }).join('');
   $('mapPages').innerHTML = '';
   const g = GAMES[state.gameSel];
-  $('mapTip').textContent = g.tip;
-  homeCs.say(`춘춘? (${g.name} 해 볼까?)`);
+  const open = isGameOpen(g, total);
+  $('mapTip').textContent = open ? g.tip : `연습에서 고구마를 모으면 열려요. (지금 ${total}개, ${g.unlock}개 필요)`;
+  homeCs.say(open ? `춘춘? (${g.name} 해 볼까?)` : `춘... (고구마 ${g.unlock - total}개만 더 모으면 열려!)`);
+}
+
+// 레벨 목록: 레벨 1은 늘, 다음 레벨은 앞 레벨에서 고구마를 받으면 열린다
+function renderLevels() {
+  const g = GAMES[state.gameSel];
+  $('mapTotal').innerHTML = `${GOGUMA_SVG} ${g.name} ${gameGoguma(g, state.records)} / ${g.levels.length * GOGUMA_MAX}`;
+  $('stageMap').innerHTML = g.levels.map((_, k) => {
+    const L = gameLevel(g, k + 1);
+    const open = isLevelOpen(g, k + 1, state.records);
+    return `<div class="stage-card ${open ? '' : 'locked'} ${k === state.levelSel ? 'selected' : ''}" data-idx="${k}">
+      <span class="sc-num">레벨 ${k + 1}</span>
+      <span class="sc-name">${L.name}</span>
+      <span class="sc-keys">${L.desc}</span>
+      <span class="sc-goguma">${gogumaIcons(state.records[levelId(g, k + 1)]?.goguma ?? 0)}</span>
+      ${open ? '' : '<span class="sc-lock">🔒</span>'}
+    </div>`;
+  }).join('');
+  $('mapPages').innerHTML = '';
+  const n = state.levelSel + 1;
+  const open = isLevelOpen(g, n, state.records);
+  $('mapTip').textContent = open ? g.tip : `레벨 ${n - 1}에서 고구마를 1개라도 받으면 열려요.`;
+  homeCs.say(open ? `춘춘! (레벨 ${n}, ${gameLevel(g, n).name}!)` : `춘... (레벨 ${n - 1}에서 고구마를 받으면 열려!)`);
+}
+
+// 잠긴 카드를 고르면: 흔들고 안내
+function lockedShake(i) {
+  sound.play('warn');
+  renderHome();
+  const card = $('stageMap').querySelector(`[data-idx="${i}"]`);
+  card?.classList.remove('shake');
+  void card?.offsetWidth;
+  card?.classList.add('shake');
 }
 
 // 처음 화면: ← → 는 같은 줄 안에서, ↓ 카드 → 설정 줄, ↑ 설정 줄 → 카드
@@ -262,7 +317,10 @@ function moveMenu(dx, dy) {
 
 function moveSel(delta) {
   if (state.page === 'menu') return moveMenu(Math.abs(delta) === 1 ? delta : 0, Math.abs(delta) === 1 ? 0 : delta);
-  const [key, n] = { menu: ['menuSel', MENU.length], practice: ['sel', STAGES.length], games: ['gameSel', GAMES.length] }[state.page];
+  const [key, n] = {
+    menu: ['menuSel', MENU.length], practice: ['sel', STAGES.length], games: ['gameSel', GAMES.length],
+    levels: ['levelSel', GAMES[state.gameSel].levels.length],
+  }[state.page];
   const next = state[key] + delta;
   if (next < 0 || next >= n) return;
   state[key] = next;
@@ -273,12 +331,24 @@ function moveSel(delta) {
 // 카드를 Enter(또는 톡)로 고름
 function chooseHome(i) {
   if (state.page === 'menu' && i >= MENU.length) return chooseSetting(settingItems()[i - MENU.length].id);
+  if (state.page === 'games') {
+    state.gameSel = i;
+    if (!isGameOpen(GAMES[i], allGoguma())) return lockedShake(i);
+    state.levelSel = suggestLevel(GAMES[i], state.records) - 1;
+    sound.play('select');
+    return goHome('levels');
+  }
+  if (state.page === 'levels') {
+    state.levelSel = i;
+    if (!isLevelOpen(GAMES[state.gameSel], i + 1, state.records)) return lockedShake(i);
+    sound.play('select');
+    return startGame(state.gameSel, i + 1);
+  }
   sound.play('select');
   if (state.page === 'menu') {
     state.menuSel = i;
     goHome(MENU[i].page);
-  } else if (state.page === 'games') startGame(i);
-  else startStage(i);
+  } else startStage(i);
 }
 
 $('stageMap').addEventListener('click', (e) => {
@@ -301,6 +371,7 @@ $('navBtn').addEventListener('click', () => {
 // ───── 연습 ─────
 
 function startStage(i) {
+  state.level = null;
   state.stageIdx = i;
   state.sel = i;
   state.stage = STAGES[i];
@@ -332,7 +403,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021241';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -399,7 +470,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610021241';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -465,14 +536,44 @@ function showStageResult() {
 }
 
 // 기록 저장. 단계 지도로 돌아가면 다음에 할 만한 단계(고구마를 받았으면 다음 단계)를 골라 둔다
+// 기록 저장. 새로 열린 게임·레벨 이름도 돌려준다 (연습으로 고구마를 모아도 게임이 열린다)
 function save(acc, cpm = null, goguma = gogumaFor(acc)) {
-  const saved = saveStageResult(state.records, state.stage.id, acc, cpm, goguma);
-  if (state.stage.type !== 'game') state.sel = suggestStage(STAGES, state.records);
+  const before = unlockSnapshot();
+  const id = state.level ? levelId(state.stage, state.level.n) : state.stage.id;
+  const saved = saveStageResult(state.records, id, acc, cpm, goguma);
+  if (!state.level) state.sel = suggestStage(STAGES, state.records);
+  saved.opened = openedSince(before);
   return saved;
+}
+
+// 지금 열려 있는 게임·레벨 (게임id, 게임id:레벨)
+function unlockSnapshot() {
+  const total = allGoguma();
+  const open = new Set();
+  for (const g of GAMES) {
+    if (!isGameOpen(g, total)) continue;
+    open.add(g.id);
+    g.levels.forEach((_, k) => isLevelOpen(g, k + 1, state.records) && open.add(levelId(g, k + 1)));
+  }
+  return open;
+}
+
+function openedSince(before) {
+  const now = unlockSnapshot();
+  const names = [];
+  for (const g of GAMES) {
+    if (now.has(g.id) && !before.has(g.id)) names.push(`게임 ${g.name}`);
+    else g.levels.forEach((_, k) => {
+      const id = levelId(g, k + 1);
+      if (now.has(id) && !before.has(id)) names.push(`${g.name} 레벨 ${k + 1}`);
+    });
+  }
+  return names;
 }
 
 function showNotes(saved, failText) {
   const notes = [];
+  if (saved.opened?.length) notes.push(`🔓 ${saved.opened.join(' · ')} 열렸어요!`);
   if (saved.newBest) notes.push('🎉 새 기록!');
   if (saved.newBestCpm) notes.push('⚡ 타수 새 기록!');
   if (!saved.goguma) notes.push(failText);
@@ -497,8 +598,7 @@ function pause() {
   clearTimeout(state.idleTimer);
   stopTestTimer();
   state.game?.pause();
-  const isGame = state.screen === 'game';
-  $('pauseSub').textContent = isGame ? gameTitle(state.stage) : $('roundLabel').textContent;
+  $('pauseSub').textContent = $('roundLabel').textContent;
   $('pauseLayer').hidden = false;
   setNav('resume');
   keyboard.setNext(['Enter']);
@@ -507,7 +607,7 @@ function pause() {
 }
 
 function renderPause() {
-  const exitTo = state.stage.type === 'game' ? '게임 고르기' : '단계 고르기';
+  const exitTo = state.level ? '레벨 고르기' : '단계 고르기';
   $('pauseMenu').innerHTML = PAUSE_ITEMS.map((it, i) =>
     `<button type="button" class="pause-item ${i === state.paused.sel ? 'selected' : ''}" data-act="${it.act}">${it.label}${it.act === 'exit' ? ` <small>(${exitTo})</small>` : ''}</button>`).join('');
 }
@@ -532,7 +632,7 @@ function choosePause(act) {
   if (!p) return;
   closePause();
   if (act === 'restart') {
-    if (state.stage.type === 'game') startGame(state.gameSel);
+    if (state.level) startGame(state.gameSel, state.level.n);
     else startStage(state.stageIdx);
     return;
   }
@@ -562,65 +662,131 @@ $('pauseMenu').addEventListener('click', (e) => {
   if (item) choosePause(item.dataset.act);
 });
 
-// ───── 게임: 고구마 비 ─────
+// ───── 게임 (공통): 레벨로 시작, 종류별(GAME_KINDS)로 그리기·입력, 끝나면 결과 ─────
 
-function startGame(i) {
-  state.game?.stop(); // 처음부터 다시: 떨어지던 고구마 치우기
+function startGame(gi, n) {
+  state.game?.stop(); // 처음부터 다시: 하던 게임 치우기
   state.game = null;
-  state.gameSel = i;
-  const stage = state.stage = GAMES[i];
-  // 해 본 단계까지의 낱말 단계에서 낱말을 모두 쓴다
-  const wordStages = gameWordStages(STAGES, state.records);
-  const words = wordStages.flatMap((s) => Object.keys(s.words));
+  state.gameSel = gi;
+  state.levelSel = n - 1;
+  const game = state.stage = GAMES[gi];
+  state.level = gameLevel(game, n);
+  state.combo = 0;
+  state.bestCombo = 0;
   const focus = new Set(['Backspace', 'CapsLock', 'Space']);
-  for (const s of wordStages) for (const ch of stageChars(s)) for (const code of codesFor(ch)) focus.add(code);
+  for (const ch of levelKeys(n)) for (const code of codesFor(ch)) focus.add(code);
   keyboard.setFocusSet([...focus]);
 
   bridge.rebase();
   state.input = { raw: '', base: 0, composing: false };
-  $('roundLabel').textContent = gameTitle(stage);
-  $('stageLabel').textContent = gameTitle(stage);
+  const title = `${gameTitle(game)} · 레벨 ${n}`;
+  $('roundLabel').textContent = title;
+  $('stageLabel').textContent = title;
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021241';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png';
+  $('gameScreen').dataset.kind = game.type;
+  $('gameCombo').hidden = true;
   show('game');
   gameCs.pose('stand');
+  GAME_KINDS[game.type].start(state.level);
+  state.game.start();
+  checkFocusSoon();
+  renderGame();
+}
+
+function renderGame() {
+  if (state.game) GAME_KINDS[state.stage.type].render();
+}
+
+// 게임 끝: 잠깐 뒤 결과
+function endGame(stats) {
+  state.screen = 'stageDone';
+  keyboard.setNext([]);
+  hands.setTargets([]);
+  $('track').classList.add('done');
+  setTimeout(() => showGameResult(stats), 800);
+}
+
+// 콤보: 연달아 맞히면 커지고, 놓치거나 틀리면 0
+function comboUp() {
+  state.combo++;
+  state.bestCombo = Math.max(state.bestCombo, state.combo);
+  const c = $('gameCombo');
+  c.hidden = state.combo < 2;
+  c.textContent = `🔥 ${state.combo} 콤보!`;
+  c.classList.remove('pop');
+  void c.offsetWidth;
+  c.classList.add('pop');
+  if (state.combo >= 3 && state.combo % 3 === 0) gameCs.say(`춘춘춘!! (${state.combo} 콤보! 대단해!)`, 'good');
+}
+
+function comboBreak() {
+  state.combo = 0;
+  $('gameCombo').hidden = true;
+}
+
+// 결과: hits/total로 고구마. lines: 아래에 덧붙일 기록들
+function showGameResult({ hits, total, label = '잡은 고구마', lines = [] }) {
+  const acc = total ? hits / total : 0;
+  const saved = save(acc);
+  const { n } = state.level;
+  const game = state.stage;
+  if (n < game.levels.length && isLevelOpen(game, n + 1, state.records) && saved.goguma > 0) state.levelSel = n; // 다음 레벨을 골라 둔다
+  show('stageDone');
+  $('resultTitle').textContent = `${gameTitle(game)} 레벨 ${n} 끝! ${cheer(saved.goguma)}`;
+  $('resultAccLabel').textContent = label;
+  $('resultAcc').textContent = `${hits} / ${total}`;
+  $('resultGoguma').hidden = false;
+  $('resultGoguma').innerHTML = gogumaIcons(saved.goguma);
+  showNotes(saved, '70% 넘게 해내면 고구마를 받아요');
+  if (state.bestCombo >= 2) lines.push(`최고 콤보 <b>${state.bestCombo}</b>`);
+  $('resultRounds').innerHTML = lines.join(' · ');
+  $('resultMiss').innerHTML = '';
+  $('resultNext').textContent = '레벨 고르기';
+  resultChunsik(saved.goguma, '게임 끝!');
+  sound.play(saved.goguma > 0 ? 'fanfare' : 'cheer');
+  keyboard.setNext(['Enter']);
+}
+
+// ───── 게임: 고구마 비 (떨어지는 낱말을 치고 스페이스바) ─────
+
+function startRain(level) {
   gameCs.say('츈츈! (떨어지는 고구마를 잡아 줘!)');
+  $('gameHint').textContent = '고구마에 적힌 낱말을 치고 스페이스바!';
   state.game = new RainGame($('rain'), {
-    words,
-    total: stage.total,
+    words: levelWords(level.n),
+    total: level.total,
+    maxActive: level.max,
+    fall: level.fall,
+    gap: level.gap,
     onSpawn: renderGame,
     onCatch: () => {
       sound.play('catch');
       gameCs.pose('goguma');
       gameCs.act('hop');
       gameCs.say(pick(['츈츈! (냠냠 맛있다!)', '춘춘춘!! (하나 더!)', '춘! (고구마 최고!)', '츈~ (배불러~)']), 'good');
+      comboUp();
       hopRunner();
       setTimeout(() => state.screen === 'game' && gameCs.pose('stand'), 900);
       renderGame();
     },
     onMiss: (d) => {
       sound.play('drop');
+      comboBreak();
       gameCs.pose('sad');
       gameCs.act('oops');
       gameCs.say(`츄... (${d.word} 고구마를 놓쳤어...)`, 'bad');
       setTimeout(() => state.screen === 'game' && gameCs.pose('stand'), 1200);
       renderGame();
     },
-    onEnd: (stats) => {
-      state.screen = 'stageDone';
-      keyboard.setNext([]);
-      hands.setTargets([]);
-      $('track').classList.add('done');
-      setTimeout(() => showGameResult(stats), 800);
-    },
+    onEnd: ({ caught, missed, wrong, total }) => endGame({
+      hits: caught, total, lines: [`놓친 고구마 <b>${missed}</b>개`, `없는 낱말 <b>${wrong}</b>번`],
+    }),
   });
-  state.game.start();
-  checkFocusSoon();
-  renderGame();
 }
 
 // 게임 입력: 스페이스(또는 Enter)가 오면 친 낱말을 낸다
-function onGameInput({ raw, base, keys, composing }) {
+function onRainInput({ raw, base, keys, composing }) {
   const prevLen = toKeys(state.input.raw).length - state.input.base;
   state.input = { raw, base, composing };
   // 새로 친 키가 한글이면 영어 모드 경고를 걷고 게임을 다시 움직인다
@@ -636,27 +802,30 @@ function typedText() {
 }
 
 function submitGameWord() {
-  if (state.screen !== 'game') return;
+  if (state.screen !== 'game' || state.stage.type !== 'rain') return;
   const word = typedText();
   bridge.rebase();
   state.input = { raw: '', base: 0, composing: false };
   if (word && state.game && !state.game.submit(word)) {
     sound.play('miss');
+    comboBreak();
     gameCs.pose('sad');
     gameCs.act('oops');
     gameCs.say(`춘? ('${word}' 고구마는 없어!)`, 'bad');
     setTimeout(() => state.screen === 'game' && gameCs.pose('stand'), 900);
-    const bar = $('gameBar');
-    bar.classList.remove('shake');
-    void bar.offsetWidth;
-    bar.classList.add('shake');
+    shake($('gameBar'));
   }
   renderGame();
 }
 
-function renderGame() {
+function shake(el) {
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+}
+
+function renderRain() {
   const game = state.game;
-  if (!game) return;
   const { raw, base, composing } = state.input;
   const typed = toKeys(raw).slice(base).filter((k) => k !== ' ');
   const target = game.pickFocus(typed);
@@ -685,28 +854,15 @@ function renderGame() {
   $('track').style.setProperty('--p', game.resolved / game.total);
 }
 
-function showGameResult({ caught, missed, wrong, total }) {
-  const acc = caught / total;
-  const saved = save(acc);
-  show('stageDone');
-  $('resultTitle').textContent = `${gameTitle(state.stage)} 끝! ${cheer(saved.goguma)}`;
-  $('resultAccLabel').textContent = '잡은 고구마';
-  $('resultAcc').textContent = `${caught} / ${total}`;
-  $('resultGoguma').hidden = false;
-  $('resultGoguma').innerHTML = gogumaIcons(saved.goguma);
-  showNotes(saved, '고구마를 70% 넘게 잡으면 고구마를 받아요');
-  $('resultRounds').innerHTML = `놓친 고구마 <b>${missed}</b>개 · 없는 낱말 <b>${wrong}</b>번`;
-  $('resultMiss').innerHTML = '';
-  $('resultNext').textContent = '게임 고르기';
-  resultChunsik(saved.goguma, '게임 끝!');
-  sound.play(saved.goguma > 0 ? 'fanfare' : 'cheer');
-  keyboard.setNext(['Enter']);
-}
+// 게임 종류별: 시작 · 입력 · 그리기
+const GAME_KINDS = {
+  rain: { start: startRain, input: onRainInput, render: renderRain },
+};
 
 // ───── 입력 처리 ─────
 
 function onChange({ raw, base, keys, composing }) {
-  if (state.screen === 'game') return onGameInput({ raw, base, keys, composing });
+  if (state.screen === 'game') return GAME_KINDS[state.stage.type].input({ raw, base, keys, composing });
   if (state.screen !== 'play') return;
   state.input = { raw, base, composing };
   const { judge } = state;
@@ -798,7 +954,7 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'ArrowRight') moveSel(1);
     else if (e.key === 'ArrowUp') moveSel(-MAP_COLS);
     else if (e.key === 'ArrowDown') moveSel(MAP_COLS);
-    else if (e.key === 'Enter' && !e.repeat) chooseHome({ menu: state.menuSel, practice: state.sel, games: state.gameSel }[state.page]);
+    else if (e.key === 'Enter' && !e.repeat) chooseHome({ menu: state.menuSel, practice: state.sel, games: state.gameSel, levels: state.levelSel }[state.page]);
     else if (e.key === 'Escape') goBack();
   } else if (state.screen === 'play') {
     resetIdle();
