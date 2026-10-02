@@ -1,19 +1,40 @@
-// 화면 아래 가상 키보드 (로지텍 K380 배열 그대로)
+// 화면 아래 가상 키보드. 배열은 고를 수 있다 (표준 텐키리스 · 75% · 65%, layout.js LAYOUTS)
 
-import { ROWS, KBD_UNITS, fingerTone } from './layout.js?v=202610021206';
+import { getLayout, fingerTone } from './layout.js?v=202610021219';
 
 export class KeyboardView {
-  constructor(container) {
+  constructor(container, layoutId) {
     this.el = container;
-    this.keys = new Map();
     this.el.classList.add('kbd');
-    this.el.style.setProperty('--units', KBD_UNITS);
-    for (const row of ROWS) {
+    this.focusSet = null;
+    this.next = { codes: [], tone: 'finger' };
+    this.setLayout(layoutId);
+  }
+
+  // 배열 바꾸기: 키를 새로 그리고, 흐리게·강조 상태는 그대로 다시 입힌다
+  setLayout(layoutId) {
+    const layout = getLayout(layoutId);
+    this.layout = layout;
+    this.keys = new Map();
+    this.el.innerHTML = '';
+    this.el.dataset.layout = layout.id;
+    this.el.style.setProperty('--units', layout.units);
+    for (const row of layout.rows) {
       const rowEl = document.createElement('div');
       rowEl.className = row.fn ? 'kbd-row fn-row' : 'kbd-row';
-      for (const key of row) rowEl.appendChild(key.stack ? this.#makeStack(key) : this.#makeKey(key));
+      for (const key of row) rowEl.appendChild(key.gap ? this.#makeGap(key) : key.stack ? this.#makeStack(key) : this.#makeKey(key));
       this.el.appendChild(rowEl);
     }
+    this.setFocusSet(this.focusSet);
+    this.setNext(this.next.codes, this.next.tone);
+    this.onLayout?.(layout);
+  }
+
+  #makeGap(key) {
+    const el = document.createElement('div');
+    el.className = 'key-gap';
+    el.style.setProperty('--w', key.w);
+    return el;
   }
 
   // 한 칸에 위아래 반 칸짜리 키 두 개 (K380의 ↑ ↓)
@@ -57,12 +78,14 @@ export class KeyboardView {
 
   // 이번 단계에서 쓰는 키만 또렷하게, 나머지는 흐리게
   setFocusSet(codes) {
+    this.focusSet = codes;
     const set = codes ? new Set(codes) : null;
     for (const [code, el] of this.keys) el.classList.toggle('dim', !!set && !set.has(code));
   }
 
   // 다음에 칠 키 강조 (여러 개 가능: Shift+ㅃ)
   setNext(codes = [], tone = 'finger') {
+    this.next = { codes, tone };
     for (const el of this.keys.values()) el.classList.remove('next', 'next-warn');
     for (const code of codes) {
       const el = this.keys.get(code);

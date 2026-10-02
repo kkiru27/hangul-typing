@@ -2,20 +2,20 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js?v=202610021206';
-import { InputBridge } from './input-bridge.js?v=202610021206';
-import { KeyboardView } from './keyboard-view.js?v=202610021206';
-import { HandsView } from './hands-view.js?v=202610021206';
-import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, shuffleItems, itemsForRound } from './lessons.js?v=202610021206';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone } from './layout.js?v=202610021206';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610021206';
-import { loadRecords, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610021206';
-import { VERSION } from './version.js?v=202610021206';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202610021206';
-import { checkForUpdate } from './update-check.js?v=202610021206';
-import { RainGame } from './game-rain.js?v=202610021206';
-import { Sound } from './sound.js?v=202610021206';
-import { loadSettings, saveSettings } from './settings.js?v=202610021206';
+import { Judge } from './judge.js?v=202610021219';
+import { InputBridge } from './input-bridge.js?v=202610021219';
+import { KeyboardView } from './keyboard-view.js?v=202610021219';
+import { HandsView } from './hands-view.js?v=202610021219';
+import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, shuffleItems, itemsForRound } from './lessons.js?v=202610021219';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610021219';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610021219';
+import { loadRecords, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610021219';
+import { VERSION } from './version.js?v=202610021219';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202610021219';
+import { checkForUpdate } from './update-check.js?v=202610021219';
+import { RainGame } from './game-rain.js?v=202610021219';
+import { Sound } from './sound.js?v=202610021219';
+import { loadSettings, saveSettings } from './settings.js?v=202610021219';
 
 const $ = (id) => document.getElementById(id);
 
@@ -24,8 +24,8 @@ const sound = new Sound(settings.sound);
 // 아이패드는 사용자 동작 안에서만 소리를 켤 수 있다 → 키·터치마다 (처음 한 번만 실제로 일함)
 for (const type of ['keydown', 'pointerdown', 'touchend']) document.addEventListener(type, () => sound.unlock(), { capture: true });
 
-const keyboard = new KeyboardView($('keyboard'));
-const hands = new HandsView($('hands'));
+const keyboard = new KeyboardView($('keyboard'), settings.layout);
+const hands = new HandsView(keyboard); // 가상 키보드 위의 반투명 손
 const bridge = new InputBridge($('ime'), { onChange, onLatin });
 const homeCs = new Chunsik($('homeChunsik'), { size: 'l' });
 const playCs = new Chunsik($('playChunsik'));
@@ -104,6 +104,7 @@ function goHome(page = state.page) {
   $('accuracy').textContent = '–';
   keyboard.setFocusSet(null);
   keyboard.setNext(['Enter']);
+  hands.setTargets([]);
   renderHome();
 }
 
@@ -153,15 +154,30 @@ function cardHtml(s, i, num, selected, preview = stagePreview(s)) {
     </div>`;
 }
 
-// 처음 화면 아래쪽 설정 줄 (카드 아래). 고른 칸은 state.menuSel = MENU.length + i
+// 처음 화면 아래쪽 설정 줄 (카드 아래): 키보드 배열 3개 + 소리. 고른 칸은 state.menuSel = MENU.length + i
+const LAYOUT_TIPS = {
+  tkl: '숫자패드 없는 보통 키보드(텐키리스)예요. 타자 연습은 이걸로 시작해요.',
+  k380: '로지텍 K380처럼 작은 키보드예요. 기능키 줄이 작고 방향키가 아래 줄에 있어요.',
+  f65: 'AULA F65처럼 기능키 줄이 없는 작은 키보드예요. Esc가 1 왼쪽에 있어요.',
+};
+
 function settingItems() {
   return [
-    { id: 'sound', label: settings.sound ? '🔊 소리 켜짐' : '🔇 소리 꺼짐', on: settings.sound },
+    ...LAYOUT_IDS.map((id) => ({
+      id: `layout:${id}`, on: settings.layout === id, tip: LAYOUT_TIPS[id],
+      label: `${id === LAYOUT_IDS[0] ? '⌨️ ' : ''}${LAYOUTS[id].name} (${LAYOUTS[id].note})`,
+    })),
+    { id: 'sound', label: settings.sound ? '🔊 소리 켜짐' : '🔇 소리 꺼짐', on: settings.sound, tip: 'Enter를 누르면 소리가 켜지고 꺼져요.' },
   ];
 }
 
 function chooseSetting(id) {
-  if (id === 'sound') {
+  if (id.startsWith('layout:')) {
+    settings.layout = id.slice('layout:'.length);
+    saveSettings(settings);
+    keyboard.setLayout(settings.layout);
+    sound.play('select');
+  } else if (id === 'sound') {
     settings.sound = sound.enabled = !settings.sound;
     saveSettings(settings);
     sound.play('select');
@@ -189,10 +205,10 @@ function renderMenu() {
   $('homeSettings').innerHTML = items.map((it, i) =>
     `<button type="button" class="set-chip ${it.on ? 'on' : ''} ${state.menuSel === MENU.length + i ? 'selected' : ''}" data-set="${it.id}">${it.label}</button>`).join('');
   const onSetting = state.menuSel >= MENU.length;
-  $('mapTip').textContent = onSetting ? 'Enter를 누르면 바뀌어요. ↑ 를 누르면 위로 돌아가요.'
+  $('mapTip').textContent = onSetting ? items[state.menuSel - MENU.length].tip
     : state.menuSel === 0 ? '처음이면 1단계부터! 자신 있으면 원하는 단계를 골라도 돼요.'
       : '연습에서 단계를 더 할수록 게임에 나오는 낱말이 늘어나요.';
-  if (onSetting) homeCs.say('춘? (여기서 소리를 바꿀 수 있어)');
+  if (onSetting) homeCs.say('춘? (키보드 모양이랑 소리를 바꿀 수 있어)');
   else if (!Object.keys(state.records).length) homeCs.say('츈츈! 춘춘춘~ (안녕! 연습할까, 게임할까?)');
   else homeCs.say(state.menuSel === 0 ? '춘춘? (타자 연습 할까?)' : '춘춘! (게임 하러 갈까?)');
 }
@@ -311,7 +327,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021206';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021219';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -371,13 +387,13 @@ function finishRound() {
   state.screen = last ? 'stageDone' : 'roundDone'; // 입력은 바로 막고, 화면은 잠깐 뒤에
   sound.play('round');
   keyboard.setNext([]);
-  hands.setActive([]);
+  hands.setTargets([]);
   clearTimeout(state.idleTimer);
   playCs.pose('goguma');
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610021206';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610021219';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -479,7 +495,7 @@ function pause() {
   $('pauseLayer').hidden = false;
   setNav('resume');
   keyboard.setNext(['Enter']);
-  hands.setActive([]);
+  hands.setTargets([]);
   renderPause();
 }
 
@@ -558,7 +574,7 @@ function startGame(i) {
   $('roundLabel').textContent = gameTitle(stage);
   $('stageLabel').textContent = gameTitle(stage);
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021206';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610021219';
   show('game');
   gameCs.pose('stand');
   gameCs.say('츈츈! (떨어지는 고구마를 잡아 줘!)');
@@ -586,7 +602,7 @@ function startGame(i) {
     onEnd: (stats) => {
       state.screen = 'stageDone';
       keyboard.setNext([]);
-      hands.setActive([]);
+      hands.setTargets([]);
       $('track').classList.add('done');
       setTimeout(() => showGameResult(stats), 800);
     },
@@ -655,7 +671,7 @@ function renderGame() {
     codes = next === ' ' ? ['Space'] : codesFor(next);
   }
   keyboard.setNext(codes, state.warn === 'english' ? 'warn' : 'finger');
-  hands.setActive(codes.map((c) => FINGER_BY_CODE[c]).filter(Boolean));
+  hands.setTargets(codes);
 
   $('progress').textContent = `${game.caught}/${game.total}`;
   $('accuracy').textContent = pct(game.resolved ? game.caught / game.resolved : null);
@@ -912,7 +928,7 @@ function render() {
       : { big: judge.nextKey, small: `${KEY_LABEL[main] ?? ''} 자리`, finger: FINGER_BY_CODE[main] };
   }
   keyboard.setNext(codes, state.warn === 'english' ? 'warn' : 'finger');
-  hands.setActive(guide.finger ? codes.map((c) => FINGER_BY_CODE[c]).filter(Boolean) : []);
+  hands.setTargets(guide.finger ? codes : []);
 
   const tone = `tone-${fingerTone(guide.finger)}`;
   $('guideCard').className = `guide-card ${tone}${guide.big.length > 1 ? ' wide-text' : ''}`;

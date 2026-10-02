@@ -4,7 +4,7 @@ import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
 import { gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
 import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, shuffleItems, itemsForRound } from '../js/lessons.js';
-import { keyFor, codesFor, ROWS, KEYS, KBD_UNITS } from '../js/layout.js';
+import { keyFor, codesFor, LAYOUTS, LAYOUT_IDS, DEFAULT_LAYOUT, getLayout, layoutKeys } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
 test('글자 → 키 순서', () => {
@@ -309,18 +309,28 @@ test('고구마와 골라 둘 단계', () => {
   assert.equal(suggestStage(STAGES, { [STAGES[lastI].id]: { goguma: 2, lastAt: 1 } }), lastI);
 });
 
-test('K380 배열: 줄마다 15칸, 기능키 줄, 자모마다 키가 있음', () => {
-  for (const row of ROWS) assert.equal(row.reduce((s, k) => s + k.w, 0), KBD_UNITS);
-  assert.equal(KBD_UNITS, 15);
-  assert.ok(ROWS[0].fn && ROWS[0][0].code === 'Escape' && ROWS[0].at(-1).code === 'Delete', '맨 윗줄: esc ~ del');
-  assert.equal(ROWS[1][0].code, 'Backquote', '1 왼쪽에 ` 키');
-  const codes = KEYS.map((key) => key.code);
-  assert.equal(new Set(codes).size, codes.length, '키 코드 중복 없음');
-  for (const c of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Fn', 'Space']) assert.ok(codes.includes(c), c);
-  for (const c of ['PageUp', 'PageDown', 'End']) assert.ok(!codes.includes(c), `K380에는 ${c} 없음`);
+test('키보드 배열 3개: 줄 너비가 같고, 글자 키는 모두 같은 자리', () => {
+  assert.deepEqual(LAYOUT_IDS, ['tkl', 'k380', 'f65']);
+  assert.equal(DEFAULT_LAYOUT, 'tkl');
+  const mainCodes = (L) => layoutKeys(L).filter((key) => key.jamo || key.symbol).map((key) => key.code).filter((c) => c !== 'Backquote');
+  for (const L of Object.values(LAYOUTS)) {
+    for (const row of L.rows) assert.equal(row.reduce((n, key) => n + key.w, 0), L.units, `${L.id} 줄 너비`);
+    const codes = layoutKeys(L).map((key) => key.code);
+    assert.equal(new Set(codes).size, codes.length, `${L.id}: 키 코드 중복 없음`);
+    for (const c of ['Escape', 'CapsLock', 'ShiftLeft', 'ShiftRight', 'Space', 'Enter', 'Backspace', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) {
+      assert.ok(codes.includes(c), `${L.id}: ${c}`);
+    }
+    assert.deepEqual(mainCodes(L), mainCodes(LAYOUTS.tkl), `${L.id}: 글자·숫자·문장부호 키 순서가 표준과 같음`);
+  }
+  assert.equal(layoutKeys(LAYOUTS.tkl).length, 87, '표준 텐키리스 87키');
+  assert.equal(layoutKeys(LAYOUTS.f65).length, 67, 'F65 67키');
+  const has = (id, c) => layoutKeys(LAYOUTS[id]).some((key) => key.code === c);
+  assert.ok(has('tkl', 'Home') && has('tkl', 'PrintScreen') && has('tkl', 'F12'), '표준: 편집키·기능키');
+  assert.ok(LAYOUTS.k380.rows[0].fn && !has('k380', 'PageUp') && has('k380', 'Backquote'), 'K380: 작은 기능키 줄, PgUp 없음');
+  assert.ok(!LAYOUTS.f65.rows.some((r) => r.fn) && !has('f65', 'F1') && has('f65', 'PageUp'), 'F65: 기능키 줄 없음');
+  assert.equal(getLayout('없는배열').id, 'tkl', '모르는 배열이면 표준');
   for (const j of 'ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡㅃㅉㄸㄲㅆㅒㅖ') assert.ok(keyFor(j), j);
   assert.deepEqual(codesFor('ㅁ'), ['KeyA']);
   assert.deepEqual(codesFor('ㅃ'), ['ShiftRight', 'KeyQ']);
   assert.deepEqual(codesFor('?'), ['ShiftLeft', 'Slash']);
-  assert.deepEqual(codesFor('`'), ['Backquote']);
 });

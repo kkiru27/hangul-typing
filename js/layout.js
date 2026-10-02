@@ -1,6 +1,6 @@
-// 로지텍 K380 배열과 두벌식 자모, 손가락 배정.
-// 글자 키 부분은 보통 키보드(미국식 배열)와 같고, 위에 작은 기능키 줄, 아래 줄 오른쪽에 작은 방향키(↑↓는 위아래 반 칸).
-// w = 키 너비(1 = 보통 키 한 칸). 한 줄 합계는 KBD_UNITS(15)칸.
+// 키보드 배열(표준 텐키리스 · 75% K380 · 65% F65)과 두벌식 자모, 손가락 배정.
+// 글자 키 부분은 세 배열 모두 같다(보통 키보드, 미국식 배열). 다른 건 기능키 줄·방향키·편집키 자리뿐.
+// w = 키 너비(1 = 보통 키 한 칸). 배열마다 한 줄 합계가 units칸으로 같다 (빈 칸은 gap).
 
 // 두벌식: 키 코드 → [기본 자모, Shift 자모]
 export const JAMO_BY_CODE = {
@@ -31,7 +31,7 @@ export const FINGER_BY_CODE = {
   Digit9: 'R4', KeyO: 'R4', KeyL: 'R4', Period: 'R4',
   Digit0: 'R5', Minus: 'R5', Equal: 'R5', Backspace: 'R5', KeyP: 'R5', BracketLeft: 'R5', BracketRight: 'R5',
   Backslash: 'R5', Semicolon: 'R5', Quote: 'R5', Enter: 'R5', Slash: 'R5', ShiftRight: 'R5',
-  Space: 'T', MetaLeft: 'T', MetaRight: 'T',
+  Space: 'T',
 };
 
 export const FINGER_NAMES = {
@@ -48,70 +48,111 @@ export function fingerTone(finger) {
 }
 
 const k = (code, w, extra = {}) => ({ code, w, ...extra });
-const fkey = (n) => k(`F${n}`, 1, { label: `F${n}`, nav: true });
+const gap = (w) => ({ code: '', w, gap: true });   // 키 사이 빈 칸
+const nav = (code, w, label, extra = {}) => k(code, w, { label, nav: true, ...extra });
+const fkeys = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => nav(`F${from + i}`, 1, `F${from + i}`));
+const fnRow = (keys) => Object.assign(keys, { fn: true }); // 기능키 줄 (반 칸 높이로 작게)
 
-export const KBD_UNITS = 15;
-
-// 화면에 그릴 배열. label: 영문 각인, 나머지 표시는 JAMO/SYMBOL 표에서 채운다.
-// fn: 작은 기능키 줄. stack: 한 칸에 위아래로 반 칸짜리 키 두 개 (↑ ↓)
-export const ROWS = [
-  Object.assign([
-    k('Escape', 1, { label: 'esc' }),
-    ...Array.from({ length: 12 }, (_, i) => fkey(i + 1)),
-    k('Insert', 1, { label: 'ins', nav: true }),
-    k('Delete', 1, { label: 'del', nav: true }),
-  ], { fn: true }),
-  [
-    k('Backquote', 1),
-    k('Digit1', 1), k('Digit2', 1), k('Digit3', 1), k('Digit4', 1), k('Digit5', 1),
-    k('Digit6', 1), k('Digit7', 1), k('Digit8', 1), k('Digit9', 1), k('Digit0', 1),
-    k('Minus', 1), k('Equal', 1),
-    k('Backspace', 2, { label: 'Backspace', icon: '⌫' }),
-  ],
-  [
-    k('Tab', 1.5, { label: 'Tab' }),
-    k('KeyQ', 1, { label: 'Q' }), k('KeyW', 1, { label: 'W' }), k('KeyE', 1, { label: 'E' }), k('KeyR', 1, { label: 'R' }),
-    k('KeyT', 1, { label: 'T' }), k('KeyY', 1, { label: 'Y' }), k('KeyU', 1, { label: 'U' }), k('KeyI', 1, { label: 'I' }),
-    k('KeyO', 1, { label: 'O' }), k('KeyP', 1, { label: 'P' }),
-    k('BracketLeft', 1), k('BracketRight', 1),
-    k('Backslash', 1.5),
-  ],
-  [
-    k('CapsLock', 1.75, { label: 'Caps Lock', hint: '한/영' }),
-    k('KeyA', 1, { label: 'A' }), k('KeyS', 1, { label: 'S' }), k('KeyD', 1, { label: 'D' }), k('KeyF', 1, { label: 'F', bump: true }),
-    k('KeyG', 1, { label: 'G' }), k('KeyH', 1, { label: 'H' }), k('KeyJ', 1, { label: 'J', bump: true }), k('KeyK', 1, { label: 'K' }),
-    k('KeyL', 1, { label: 'L' }),
-    k('Semicolon', 1), k('Quote', 1),
-    k('Enter', 2.25, { label: 'Enter', icon: '⏎' }),
-  ],
-  [
-    k('ShiftLeft', 2.25, { label: 'Shift', icon: '⇧' }),
-    k('KeyZ', 1, { label: 'Z' }), k('KeyX', 1, { label: 'X' }), k('KeyC', 1, { label: 'C' }), k('KeyV', 1, { label: 'V' }),
-    k('KeyB', 1, { label: 'B' }), k('KeyN', 1, { label: 'N' }), k('KeyM', 1, { label: 'M' }),
-    k('Comma', 1), k('Period', 1), k('Slash', 1),
-    k('ShiftRight', 2.75, { label: 'Shift', icon: '⇧' }),
-  ],
-  [
-    k('ControlLeft', 1, { label: 'ctrl' }),
-    k('Fn', 1, { label: 'fn' }),
-    k('AltLeft', 1, { label: 'opt' }),
-    k('MetaLeft', 1.25, { label: 'cmd' }),
-    k('Space', 5.5, { label: '스페이스' }),
-    k('MetaRight', 1.25, { label: 'cmd' }),
-    k('AltRight', 1, { label: 'opt' }),
-    k('ArrowLeft', 1, { icon: '←', nav: true }),
-    k('ArrowStack', 1, { stack: [k('ArrowUp', 1, { icon: '↑', nav: true }), k('ArrowDown', 1, { icon: '↓', nav: true })] }),
-    k('ArrowRight', 1, { icon: '→', nav: true }),
-  ],
+// 글자 키 부분 (세 배열 공통)
+const digits = () => [
+  k('Digit1', 1), k('Digit2', 1), k('Digit3', 1), k('Digit4', 1), k('Digit5', 1),
+  k('Digit6', 1), k('Digit7', 1), k('Digit8', 1), k('Digit9', 1), k('Digit0', 1),
+  k('Minus', 1), k('Equal', 1),
+  k('Backspace', 2, { label: 'Backspace', icon: '⌫' }),
 ];
+const topRow = () => [
+  k('Tab', 1.5, { label: 'Tab' }),
+  ...'QWERTYUIOP'.split('').map((c) => k(`Key${c}`, 1, { label: c })),
+  k('BracketLeft', 1), k('BracketRight', 1),
+  k('Backslash', 1.5),
+];
+const homeRow = () => [
+  k('CapsLock', 1.75, { label: 'Caps Lock', hint: '한/영' }),
+  ...'ASDFGHJKL'.split('').map((c) => k(`Key${c}`, 1, { label: c, bump: c === 'F' || c === 'J' })),
+  k('Semicolon', 1), k('Quote', 1),
+  k('Enter', 2.25, { label: 'Enter', icon: '⏎' }),
+];
+const shiftRow = (rightShift) => [
+  k('ShiftLeft', 2.25, { label: 'Shift', icon: '⇧' }),
+  ...'ZXCVBNM'.split('').map((c) => k(`Key${c}`, 1, { label: c })),
+  k('Comma', 1), k('Period', 1), k('Slash', 1),
+  k('ShiftRight', rightShift, { label: 'Shift', icon: '⇧' }),
+];
+const arrow = (code, icon) => k(code, 1, { icon, nav: true });
 
-// 화면에 그려지는 키 하나하나 (↑↓처럼 한 칸에 두 개 있는 키도 따로)
-export const KEYS = ROWS.flat().flatMap((key) => key.stack || [key]);
+export const LAYOUTS = {
+  // 표준: 숫자패드 없는 보통 키보드 (87키). 기능키 줄 · 편집키 6개 · 방향키 역T
+  tkl: {
+    id: 'tkl', name: '표준', note: '텐키리스', units: 18.25,
+    rows: [
+      fnRow([k('Escape', 1, { label: 'Esc' }), gap(1), ...fkeys(1, 4), gap(0.5), ...fkeys(5, 8), gap(0.5), ...fkeys(9, 12),
+        gap(0.25), nav('PrintScreen', 1, 'PrtSc'), nav('ScrollLock', 1, 'ScrLk'), nav('Pause', 1, 'Pause')]),
+      [k('Backquote', 1), ...digits(), gap(0.25), nav('Insert', 1, 'Ins'), nav('Home', 1, 'Home'), nav('PageUp', 1, 'PgUp')],
+      [...topRow(), gap(0.25), nav('Delete', 1, 'Del'), nav('End', 1, 'End'), nav('PageDown', 1, 'PgDn')],
+      [...homeRow(), gap(3.25)],
+      [...shiftRow(2.75), gap(1.25), arrow('ArrowUp', '↑'), gap(1)],
+      [
+        k('ControlLeft', 1.25, { label: 'Ctrl' }), k('MetaLeft', 1.25, { label: 'Win' }), k('AltLeft', 1.25, { label: 'Alt' }),
+        k('Space', 6.25, { label: '스페이스' }),
+        k('AltRight', 1.25, { label: 'Alt' }), k('MetaRight', 1.25, { label: 'Win' }), k('ContextMenu', 1.25, { label: 'Menu' }),
+        k('ControlRight', 1.25, { label: 'Ctrl' }),
+        gap(0.25), arrow('ArrowLeft', '←'), arrow('ArrowDown', '↓'), arrow('ArrowRight', '→'),
+      ],
+    ],
+  },
+  // 75%: 로지텍 K380 모양. 작은 기능키 줄(esc ~ del), 아래 줄 오른쪽에 작은 방향키(↑↓는 위아래 반 칸)
+  k380: {
+    id: 'k380', name: '75%', note: 'K380', units: 15,
+    rows: [
+      fnRow([k('Escape', 1, { label: 'esc' }), ...fkeys(1, 12), nav('Insert', 1, 'ins'), nav('Delete', 1, 'del')]),
+      [k('Backquote', 1), ...digits()],
+      topRow(),
+      homeRow(),
+      shiftRow(2.75),
+      [
+        k('ControlLeft', 1, { label: 'ctrl' }), k('Fn', 1, { label: 'fn' }), k('AltLeft', 1, { label: 'opt' }),
+        k('MetaLeft', 1.25, { label: 'cmd' }), k('Space', 5.5, { label: '스페이스' }), k('MetaRight', 1.25, { label: 'cmd' }),
+        k('AltRight', 1, { label: 'opt' }),
+        arrow('ArrowLeft', '←'),
+        k('ArrowStack', 1, { stack: [arrow('ArrowUp', '↑'), arrow('ArrowDown', '↓')] }),
+        arrow('ArrowRight', '→'),
+      ],
+    ],
+  },
+  // 65%: AULA F65 모양. 기능키 줄 없음(Esc가 1 왼쪽), 오른쪽에 편집키 한 줄, 방향키
+  f65: {
+    id: 'f65', name: '65%', note: 'F65', units: 16,
+    rows: [
+      [k('Escape', 1, { label: 'Esc' }), ...digits(), nav('Delete', 1, 'Del')],
+      [...topRow(), nav('PageUp', 1, 'PgUp')],
+      [...homeRow(), nav('PageDown', 1, 'PgDn')],
+      [...shiftRow(1.75), arrow('ArrowUp', '↑'), nav('End', 1, 'End')],
+      [
+        k('ControlLeft', 1.25, { label: 'Ctrl' }), k('MetaLeft', 1.25, { label: 'Win' }), k('AltLeft', 1.25, { label: 'Alt' }),
+        k('Space', 6.25, { label: '스페이스' }), k('AltRight', 1.5, { label: 'Alt' }), k('Fn', 1.5, { label: 'Fn' }),
+        arrow('ArrowLeft', '←'), arrow('ArrowDown', '↓'), arrow('ArrowRight', '→'),
+      ],
+    ],
+  },
+};
+export const LAYOUT_IDS = Object.keys(LAYOUTS);
+export const DEFAULT_LAYOUT = 'tkl';
 
-for (const key of KEYS) {
-  key.jamo = JAMO_BY_CODE[key.code] || null;
-  key.symbol = SYMBOL_BY_CODE[key.code] || null;
-  key.finger = FINGER_BY_CODE[key.code] || null;
+export function getLayout(id) {
+  return LAYOUTS[id] || LAYOUTS[DEFAULT_LAYOUT];
+}
+
+// 화면에 그려지는 키 하나하나 (↑↓처럼 한 칸에 두 개 있는 키도 따로, 빈 칸은 빼고)
+export function layoutKeys(layout) {
+  return layout.rows.flat().flatMap((key) => key.stack || [key]).filter((key) => !key.gap);
+}
+
+for (const layout of Object.values(LAYOUTS)) {
+  for (const key of layoutKeys(layout)) {
+    key.jamo = JAMO_BY_CODE[key.code] || null;
+    key.symbol = SYMBOL_BY_CODE[key.code] || null;
+    key.finger = FINGER_BY_CODE[key.code] || null;
+  }
 }
 
 // 글자(키 하나) → { code, shift }
@@ -124,7 +165,9 @@ CHAR_TO_KEY.set(' ', { code: 'Space', shift: false });
 
 // 키 이름 (안내 카드의 "F 자리", "Shift + R" 같은 글자)
 export const KEY_LABEL = {};
-for (const key of KEYS) KEY_LABEL[key.code] = key.symbol ? key.symbol[0] : key.label || key.code;
+for (const layout of Object.values(LAYOUTS)) {
+  for (const key of layoutKeys(layout)) KEY_LABEL[key.code] = key.symbol ? key.symbol[0] : key.label || key.code;
+}
 KEY_LABEL.Space = '스페이스';
 
 export function keyFor(char) {

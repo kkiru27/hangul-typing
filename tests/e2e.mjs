@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { ImeSim } from './ime-sim.mjs';
 import { toKeys } from '../js/hangul.js';
 import { STAGES } from '../js/lessons.js';
+import { codesFor, FINGER_BY_CODE } from '../js/layout.js';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -73,24 +74,77 @@ check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete &&
 check(await pageOf(page) === 'menu' && await page.locator('.menu-card').count() === 2, '처음 화면: 타자 연습 / 게임 두 갈래');
 check((await text('.menu-card.selected')).includes('타자 연습') && (await text('#homeChunsik .cs-bubble')).includes('게임할까'), '처음엔 타자 연습이 골라져 있고 춘식이가 물어봄');
 check(await page.locator('#navBtn').isHidden() && await page.locator('#brand').isVisible(), '처음 화면: 왼쪽 위는 앱 이름');
-check(await page.locator('.fn-row .key').count() === 15 && await page.locator('.key[data-code="Backquote"]').count() === 1
-  && await page.locator('.key-stack .key').count() === 2 && await page.locator('.key[data-code="PageUp"]').count() === 0, '가상 키보드: K380 배열 (기능키 줄, ` 키, 반 칸 ↑↓, PgUp 없음)');
-const kbdBox = await page.locator('#keyboard').boundingBox();
-const rows = await page.locator('.kbd-row').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width)));
-check(rows.every((w) => Math.abs(w - rows[1]) <= 2) && kbdBox.x + kbdBox.width <= W, `키보드 줄 너비가 같고 화면 안 (${rows.join(',')})`);
+const lastSound = (p = page) => p.evaluate(() => document.body.dataset.lastSound || '');
+const layoutNow = () => page.locator('#keyboard').getAttribute('data-layout');
+const count = (sel) => page.locator(sel).count();
+// 손: 색칠된 손가락(finger)의 끝이 그 키(code) 위에 있는지
+const activeTipOn = (code, finger) => page.evaluate(([code, finger]) => {
+  const ln = document.querySelector(`.hands-overlay .h-active[data-finger="${finger}"] .h-active-fill`);
+  const key = document.querySelector(`#keyboard .key[data-code="${code}"]`);
+  if (!ln || !key) return false;
+  const x = +ln.getAttribute('x2'), y = +ln.getAttribute('y2');
+  return x >= key.offsetLeft && x <= key.offsetLeft + key.offsetWidth && y >= key.offsetTop && y <= key.offsetTop + key.offsetHeight;
+}, [code, finger]);
+// 쉬는 손: 손톱(손가락 끝)이 기본자리 키 위에 있는지 (왼손 새끼→검지 ㅁㄴㅇㄹ, 오른손 새끼→검지 ; ㅣ ㅏ ㅓ)
+const restOnHome = () => page.evaluate(() => {
+  const home = { L: ['KeyA', 'KeyS', 'KeyD', 'KeyF'], R: ['Semicolon', 'KeyL', 'KeyK', 'KeyJ'] };
+  return Object.entries(home).every(([side, codes]) => {
+    const nails = [...document.querySelectorAll(`.hands-overlay .hand[data-side="${side}"] .h-body .h-nail`)].slice(0, 4);
+    return nails.length === 4 && nails.every((n, i) => {
+      const key = document.querySelector(`#keyboard .key[data-code="${codes[i]}"]`);
+      const x = +n.getAttribute('cx'), y = +n.getAttribute('cy');
+      return x >= key.offsetLeft && x <= key.offsetLeft + key.offsetWidth && y >= key.offsetTop && y <= key.offsetTop + key.offsetHeight;
+    });
+  });
+});
+// 키보드 줄 너비가 모두 같고 화면 안에 들어오는지
+async function rowsOk(name) {
+  const box = await page.locator('#keyboard').boundingBox();
+  const rows = await page.locator('.kbd-row').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width)));
+  check(rows.every((w) => Math.abs(w - rows[0]) <= 2) && box.x >= 0 && box.x + box.width <= W, `${name}: 줄 너비가 같고 화면 안 (${rows.join(',')})`);
+}
+check(await layoutNow() === 'tkl' && await count('#keyboard .key') === 87 && await count('.key[data-code="Home"]') === 1
+  && await count('.fn-row .key') === 16, '처음 배열: 표준 텐키리스 87키 (기능키 줄·편집키·방향키)');
+await rowsOk('표준');
+check(await count('.hands-overlay .hand') === 2 && await restOnHome(), '키보드 위 반투명 두 손: 손가락 끝이 기본자리 (표준)');
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/00-menu.png` });
-// 소리: ↓ 로 설정 줄 → Enter로 끄고 켜기 (새로고침해도 남음)
-const lastSound = (p = page) => p.evaluate(() => document.body.dataset.lastSound || '');
+
+// 설정 줄: ↓ 로 내려가서 배열 바꾸기 (← → 고르고 Enter)
 await page.keyboard.press('ArrowDown');
-check((await text('.set-chip.selected')).includes('소리 켜짐') && await lastSound() === 'move', '↓ → 설정 줄 "소리 켜짐" (틱 소리)');
+check((await text('.set-chip.selected')).includes('표준') && await lastSound() === 'move', '↓ → 설정 줄 "표준 (텐키리스)" (틱 소리)');
 check(await page.evaluate(() => 'AudioContext' in window), 'Web Audio 있음');
+await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter');
+check(await layoutNow() === 'k380' && await count('.fn-row .key') === 15 && await count('.key-stack .key') === 2
+  && await count('.key[data-code="PageUp"]') === 0 && (await text('.set-chip.on[data-set^="layout:"]')).includes('K380'), '→ Enter: 75% (K380) — 작은 기능키 줄, 반 칸 ↑↓, PgUp 없음');
+await rowsOk('75%');
+check(await restOnHome(), '배열을 바꾸면 손도 따라감 (75%)');
+check(await page.locator('.key[data-code="Enter"]').evaluate((el) => el.classList.contains('next')), '배열을 바꿔도 Enter 강조 그대로');
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/22-layout-k380.png` });
+await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter');
+check(await layoutNow() === 'f65' && await count('.fn-row') === 0 && await count('.key[data-code="PageUp"]') === 1 && await count('#keyboard .key') === 67, '→ Enter: 65% (F65) — 기능키 줄 없음, 67키');
+await rowsOk('65%');
+check(await restOnHome(), '배열을 바꾸면 손도 따라감 (65%)');
+await page.reload();
+check(await layoutNow() === 'f65', '새로고침해도 고른 배열(65%) 유지');
+
+// 소리: 설정 줄 맨 끝. Enter로 끄고 켜기 (새로고침해도 남음)
+await page.keyboard.press('ArrowDown');
+for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+check((await text('.set-chip.selected')).includes('소리 켜짐'), '설정 줄 끝: "소리 켜짐"');
 await page.keyboard.press('Enter');
 check((await text('.set-chip.selected')).includes('소리 꺼짐'), 'Enter → 소리 꺼짐');
 await page.reload();
 check((await text('#homeSettings')).includes('소리 꺼짐'), '새로고침해도 소리 꺼짐 유지');
-await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+await page.keyboard.press('ArrowDown');
+for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+await page.keyboard.press('Enter');
 check((await text('.set-chip.selected')).includes('소리 켜짐') && await lastSound() === 'select', '다시 켜기 (켜지면서 소리)');
+// 표준으로 되돌리기 (아래 흐름은 표준 배열 기준)
+for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowLeft');
+await page.keyboard.press('Enter');
+check(await layoutNow() === 'tkl', '← ← ← Enter → 표준으로');
 await page.keyboard.press('ArrowUp');
 check((await text('.menu-card.selected')).includes('타자 연습'), '↑ → 카드로 돌아감');
 await page.keyboard.press('Enter');
@@ -129,6 +183,9 @@ check(await page.locator('#playScreen').isVisible(), 'Enter로 1단계 시작');
 check(await page.evaluate(() => document.activeElement.id) === 'ime', '숨은 입력칸에 포커스');
 
 const targets = await page.locator('#tiles .tile').allInnerTexts();
+const code0 = codesFor(targets[0])[0];
+check(await activeTipOn(code0, FINGER_BY_CODE[code0]) && (await page.locator('.hands-overlay').getAttribute('data-active')) === FINGER_BY_CODE[code0],
+  `첫 글자(${targets[0]}): 그 손가락만 색칠되고 끝이 ${code0} 위`);
 // 첫 3개 맞게 치기 (조합 이벤트로)
 for (const k of targets.slice(0, 3)) await press(k);
 check((await text('#progress')) === `3/${targets.length}`, `조합 중에도 진행 3/${targets.length}`);
@@ -219,7 +276,7 @@ const w1 = await text('.wq.current');
 for (const k of toKeys(w1)) await press(k);
 check(await page.locator('.wb-space.next').count() === 1, `낱말(${w1})을 다 치면 스페이스 표시`);
 check((await text('#guideJamo')) === '⎵' && await page.locator('.key[data-code="Space"]').evaluate((el) => el.classList.contains('next')), '안내: 스페이스바');
-check(await page.locator('.hands .finger.active[data-finger="T"]').count() === 2, '손 그림: 두 엄지');
+check(await page.locator('.hands-overlay .h-active[data-finger="T"]').count() === 2, '손: 두 엄지 (스페이스바)');
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/13-words.png` });
 await press(' ');
@@ -268,6 +325,7 @@ check(t5[0] === 'ㄲ', `5단계 첫 글자 ㄲ (${t5[0]})`);
 check(await page.locator('.key[data-code="ShiftRight"]').evaluate((el) => el.classList.contains('next'))
   && await page.locator('.key[data-code="KeyR"]').evaluate((el) => el.classList.contains('next')), 'ㄲ → 오른쪽 Shift + R 강조');
 check((await text('#guideKey')) === 'Shift + R', '안내 카드: Shift + R');
+check(await activeTipOn('ShiftRight', 'R5') && await activeTipOn('KeyR', 'L2'), '손: 오른손 새끼는 오른쪽 Shift, 왼손 검지는 R로 뻗음');
 await press('ㄱ');
 check((await text('#playChunsik .cs-bubble')).includes('Shift를 누른 채'), 'Shift 빼먹으면 Shift 안내');
 await page.waitForTimeout(500);

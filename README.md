@@ -2,7 +2,7 @@
 
 **바로 가기: https://kkiru27.github.io/hangul-typing/** (입력 테스트: [test.html](https://kkiru27.github.io/hangul-typing/test.html))
 
-키보드를 처음 치는 사람을 위한 두벌식 한글 타자 연습. 아이패드 사파리 + 외장 키보드(로지텍 K380) 기준, 가로 화면, 키보드만으로 진행.
+키보드를 처음 치는 사람을 위한 두벌식 한글 타자 연습. 아이패드 사파리 + 외장 키보드 기준(화면 키보드는 표준 텐키리스 · 75% · 65% 중 고름), 가로 화면, 키보드만으로 진행.
 
 - `index.html` 연습 앱: 처음 화면에서 **타자 연습** / **게임** 고르기
   - 타자 연습: 단계 지도(한 쪽에 6개, 2쪽) → 연습 → 고구마
@@ -37,8 +37,9 @@
 | `js/hangul.js` | 글자 → 키 순서 분해 |
 | `js/judge.js` | 판정·정확도 (화면과 무관, 낱말·문장에도 그대로 씀) |
 | `js/input-bridge.js` | 숨은 입력칸 ↔ 판정기 (composition/input/keyup 어느 쪽이 와도 값 전체를 다시 읽음) |
-| `js/layout.js` | K380 배열(한 줄 15칸, 기능키 줄, 반 칸 ↑↓), 두벌식 자모, 손가락 배정 |
-| `js/keyboard-view.js`, `js/hands-view.js` | 가상 키보드, 손 그림 |
+| `js/layout.js` | 키보드 배열 3개(표준 텐키리스 · 75% K380 · 65% F65), 두벌식 자모, 손가락 배정 |
+| `js/keyboard-view.js`, `js/hands-view.js` | 가상 키보드, 키보드 위 반투명 손 |
+| `js/sound.js`, `js/settings.js` | 효과음(Web Audio), 설정(소리·배열) |
 | `js/lessons.js` | 단계 데이터 (새 단계는 여기에 추가) |
 | `js/records.js` | 단계별 기록·고구마·골라 둘 단계·게임 낱말 범위 |
 | `js/game-rain.js` | 고구마 비 게임 (떨어지기·잡기·놓치기) |

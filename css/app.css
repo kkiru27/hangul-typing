@@ -251,7 +251,6 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .guide-key { margin-top: 6px; font-size: 15px; font-weight: 700; color: var(--muted); }
 .guide-side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .guide-finger { font-size: 22px; font-weight: 800; color: var(--c); }
-.hands { width: 260px; height: 118px; }
 
 /* 친 글자 막대: 검색창처럼 */
 .typed-bar {
@@ -348,7 +347,6 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   .guide-card { width: 96px; height: 96px; }
   .guide-jamo { font-size: 48px; }
   .guide-card.wide-text .guide-jamo { font-size: 28px; }
-  .hands { width: 210px; height: 94px; }
   .tile { width: 40px; height: 42px; font-size: 22px; }
   .tile.current { width: 50px; height: 52px; font-size: 30px; }
   .tiles, .tile-row { gap: 6px; }
