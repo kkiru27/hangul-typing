@@ -107,6 +107,18 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .mc-meta .goguma { width: 24px; }
 #homeScreen[data-page="menu"] .stage-map { grid-template-columns: repeat(2, 280px); gap: 16px; }
 #homeScreen[data-page="games"] .stage-map { grid-template-columns: repeat(var(--cols, 3), 240px); }
+/* 처음 화면 설정 줄 (소리·키보드) */
+.home-settings { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 2px; }
+.home-settings[hidden] { display: none; }
+.set-chip {
+  padding: 5px 14px;
+  border: 2px solid var(--line); border-radius: 999px;
+  background: var(--card); color: var(--muted);
+  font-size: 15px; font-weight: 800; white-space: nowrap;
+  cursor: pointer;
+}
+.set-chip.on { color: var(--ink); border-color: #f3c1ae; background: #fff1ea; }
+.set-chip.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 122, 89, .22); }
 .map-pages { display: flex; gap: 8px; min-height: 10px; }
 .map-pages span { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
 .map-pages span.on { background: var(--accent); }

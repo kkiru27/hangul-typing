@@ -1,6 +1,6 @@
 // 화면 아래 가상 키보드 (로지텍 K380 배열 그대로)
 
-import { ROWS, KBD_UNITS, fingerTone } from './layout.js?v=202610020536';
+import { ROWS, KBD_UNITS, fingerTone } from './layout.js?v=202610021206';
 
 export class KeyboardView {
   constructor(container) {
