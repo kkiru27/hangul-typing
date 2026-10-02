@@ -73,6 +73,29 @@ export function gameWordStages(stages, records) {
   return upTo.length ? upTo : all.slice(0, 1);
 }
 
+// 낱말·문장을 마지막으로 친 때 (덜 본 것 먼저 내려고). 기록과 따로 저장, 너무 많아지면 오래된 것부터 버린다
+const SEEN_KEY = 'hangul-typing:seen:v1';
+export const SEEN_MAX = 800;
+
+export function loadSeen() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}');
+    return s && typeof s === 'object' ? s : {};
+  } catch {
+    return {};
+  }
+}
+
+export function markSeen(seen, text, now = Date.now()) {
+  seen[text] = now;
+  const keys = Object.keys(seen);
+  if (keys.length > SEEN_MAX) {
+    keys.sort((a, b) => seen[a] - seen[b]);
+    for (const k of keys.slice(0, keys.length - SEEN_MAX * 0.75)) delete seen[k];
+  }
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); } catch { /* 저장 못 해도 진행 */ }
+}
+
 export function totalGoguma(stages, records) {
   return stages.reduce((sum, s) => sum + (records[s.id]?.goguma ?? 0), 0);
 }

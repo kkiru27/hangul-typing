@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
-import { gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
+import { markSeen, SEEN_MAX, gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
-import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, shuffleItems, itemsForRound } from '../js/lessons.js';
+import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, freshOrder, itemsForRound } from '../js/lessons.js';
 import { keyFor, codesFor, LAYOUTS, LAYOUT_IDS, DEFAULT_LAYOUT, getLayout, layoutKeys } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
@@ -220,7 +220,7 @@ test('낱말 단계: 앞에서 배운 자리로만 칠 수 있는 낱말', () =>
 
 test('낱말 판 만들기: 섞은 순서를 판마다 이어서, 모자라면 처음부터', () => {
   const stage = STAGES.find((s) => s.type === 'words');
-  const order = shuffleItems(stage);
+  const order = freshOrder(stageItems(stage));
   assert.equal(new Set(order).size, Object.keys(stage.words).length);
   const r0 = itemsForRound(order, stage, 0);
   const r1 = itemsForRound(order, stage, 1);
@@ -229,6 +229,21 @@ test('낱말 판 만들기: 섞은 순서를 판마다 이어서, 모자라면 �
   assert.equal(new Set([...r0, ...r1]).size, r0.length + r1.length); // 앞 두 판은 겹치지 않음
   const all = stage.rounds.flatMap((_, i) => itemsForRound(order, stage, i));
   assert.ok(all.every(Boolean));
+});
+
+test('덜 본 것 먼저: 안 친 것 → 오래전에 친 것 순, 안 친 것끼리는 섞임', () => {
+  const items = ['가', '나', '다', '라', '마'];
+  const seen = { 가: 300, 나: 100 };
+  const order = freshOrder(items, seen);
+  assert.deepEqual(order.slice(3), ['나', '가'], '친 것은 뒤로, 오래된 것 먼저');
+  assert.deepEqual(new Set(order.slice(0, 3)), new Set(['다', '라', '마']));
+  const firsts = new Set();
+  for (let i = 0; i < 30; i++) firsts.add(freshOrder(items, seen)[0]);
+  assert.ok(firsts.size > 1, '안 친 것끼리는 매번 다른 순서');
+  // 너무 많아지면 오래된 것부터 버린다 (노드에는 저장소가 없어도 동작)
+  const big = {};
+  for (let i = 0; i < SEEN_MAX + 5; i++) markSeen(big, `글${i}`, i);
+  assert.ok(Object.keys(big).length <= SEEN_MAX && big[`글${SEEN_MAX + 4}`] != null && big['글0'] == null);
 });
 
 test('낱말 + 스페이스를 입력기 흉내로 판정 (스페이스가 조합을 끝냄)', () => {

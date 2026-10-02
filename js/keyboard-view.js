@@ -1,6 +1,6 @@
 // 화면 아래 가상 키보드. 배열은 고를 수 있다 (표준 텐키리스 · 75% · 65%, layout.js LAYOUTS)
 
-import { getLayout, fingerTone } from './layout.js?v=202610021219';
+import { getLayout, fingerTone } from './layout.js';
 
 export class KeyboardView {
   constructor(container, layoutId) {

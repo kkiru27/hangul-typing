@@ -305,6 +305,8 @@ for (const k of [...toKeys(w3), ' ']) await press(k);
 check((await text('#progress')) === '3/8', `계속한 뒤 세 번째 낱말(${w3}) 끝`);
 await page.keyboard.press('Escape'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
 check((await text('#progress')) === '0/8' && (await text('#roundLabel')).includes('(1/3)'), '처음부터 다시 → 첫 판 0/8');
+const fresh = await page.locator('.wq').allInnerTexts();
+check(fresh.every((w) => ![w1, w2, w3].includes(w)), `다시 하면 방금 친 낱말(${w1}·${w2}·${w3})은 뒤로 — 새 판: ${fresh.join(' ')}`);
 await exitViaPause(page);
 check(await pageOf(page) === 'practice', '나가기 → 단계 지도');
 
