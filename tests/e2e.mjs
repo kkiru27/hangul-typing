@@ -450,13 +450,74 @@ await page3.waitForTimeout(800);
 await page3.screenshot({ path: `${OUT}/18-test-result.png` });
 await page3.close();
 
-// ── 게임: 목록 → 레벨 → 고구마 비 ──
+// ── 게임: 목록(잠금) → 고구마 캐기 ──
 await page.goto(`${BASE}/index.html`);
 resetIme();
 await page.keyboard.press('ArrowRight');
 check((await text('.menu-card.selected')).includes('게임') && (await text('#homeChunsik .cs-bubble')).includes('게임 하러'), '처음 화면에서 → 로 게임 고르기');
 await page.keyboard.press('Enter');
 check(await pageOf(page) === 'games' && (await text('#stageLabel')).includes('게임'), 'Enter → 게임 목록');
+const cards = await page.locator('.game-card').allInnerTexts();
+check(cards.length >= 2 && cards[0].includes('고구마 캐기') && !(await page.locator('.game-card').first().evaluate((el) => el.classList.contains('locked'))), '첫 게임 고구마 캐기는 처음부터 열림');
+const rainCard = page.locator('.game-card', { hasText: '고구마 비' });
+check(await rainCard.evaluate((el) => el.classList.contains('locked')) && (await rainCard.innerText()).includes('3개 더'), '고구마 비는 잠김: 고구마 3개 더 (지금 3개, 6개 필요)');
+await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter');
+check(await pageOf(page) === 'games' && await lastSound() === 'warn' && (await text('#homeChunsik .cs-bubble')).includes('더 모으면'), '잠긴 게임은 Enter로 시작 안 됨 (흔들고 안내)');
+await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Enter'); // 고구마 캐기 → 레벨 목록
+await page.keyboard.press('Enter'); // 레벨 1
+check(await page.locator('#gameScreen').isVisible() && (await text('#roundLabel')).includes('고구마 캐기 · 레벨 1') && await page.locator('#gameBar').isHidden(), '고구마 캐기 레벨 1 (친 글자 막대 없음)');
+await page.locator('.dig-hole.up').waitFor({ timeout: 5000 });
+const digKey = await text('.dig-hole.up .dig-key');
+const digCode = codesFor(digKey).at(-1);
+check(await page.locator(`.key[data-code="${digCode}"]`).evaluate((el) => el.classList.contains('next')) && await activeTipOn(digCode, FINGER_BY_CODE[digCode]), `올라온 고구마(${digKey}): 키보드·손으로 힌트`);
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/24-dig.png` });
+await press(digKey);
+await page.waitForTimeout(100);
+check((await text('#progress')) === '1/16' && await lastSound() === 'catch', `${digKey} 키 → 고구마 캠 (1/16)`);
+const wrongKey = ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ'].find((k) => k !== digKey);
+await page.locator('.dig-hole.up').waitFor({ timeout: 5000 });
+const upKeys = await page.locator('.dig-hole.up .dig-key').allInnerTexts();
+await press(upKeys.includes(wrongKey) ? 'ㅎ' : wrongKey);
+await page.waitForTimeout(100);
+check(await lastSound() === 'miss' && (await text('#gameChunsik .cs-bubble')).includes('없어'), '없는 글자 키 → 틀림 안내');
+await commit(); resetIme();
+await exitViaPause(page);
+check(await pageOf(page) === 'levels' && await page.locator('.dig-board').count() === 0, '나가기 → 레벨 목록 (구멍 치움)');
+
+// 고구마 캐기 끝까지 (시계를 빨리): 다 캐면 고구마 3개, 레벨 2가 열림
+const page4 = await browser.newPage({ viewport: { width: W, height: H } });
+page4.on('pageerror', (e) => errors.push(String(e)));
+const cdp4 = await page4.context().newCDPSession(page4);
+await page4.clock.install();
+await page4.goto(`${BASE}/index.html`);
+await openPage(page4, 1);
+await page4.keyboard.press('Enter'); await page4.keyboard.press('Enter'); // 고구마 캐기 → 레벨 1
+for (let i = 0; i < 16; i++) {
+  await page4.clock.runFor(1900);
+  const k = await page4.locator('.dig-hole.up .dig-key').first().innerText();
+  await cdp4.send('Input.insertText', { text: k });
+}
+await page4.clock.runFor(2000);
+check(await page4.locator('#resultScreen').isVisible() && (await page4.locator('#resultAcc').innerText()) === '16 / 16' && (await page4.locator('#resultAccLabel').innerText()) === '캔 고구마', '고구마 캐기 다 캠: 16 / 16');
+check(await page4.locator('#resultGoguma .goguma.earned').count() === 3 && (await page4.locator('#resultNote').innerText()).includes('고구마 캐기 레벨 2'), `고구마 3개 + 레벨 2 열림 안내 (${await page4.locator('#resultNote').innerText()})`);
+check((await page4.locator('#resultRounds').innerText()).includes('최고 콤보 16'), '최고 콤보 16');
+await page4.keyboard.press('Enter');
+check(await page4.locator('#homeScreen').getAttribute('data-page') === 'levels' && (await page4.locator('.stage-card.selected').innerText()).includes('레벨 2'), '결과에서 Enter → 레벨 목록, 레벨 2가 골라져 있음');
+await page4.close();
+
+// ── 게임: 고구마 비 (고구마 6개를 모았다고 치고 열기) ──
+const seedRecords = (p) => p.evaluate(() => {
+  const k = 'hangul-typing:records:v1';
+  const r = JSON.parse(localStorage.getItem(k) || '{}');
+  r['keys-top-left'] = { best: 0.96, goguma: 3, plays: 1, lastAt: 1 };
+  r['keys-top-right'] = { best: 0.96, goguma: 3, plays: 1, lastAt: 2 };
+  localStorage.setItem(k, JSON.stringify(r));
+});
+await seedRecords(page);
+await page.goto(`${BASE}/index.html`);
+resetIme();
+await openPage(page, 1);
 // 고구마 비 카드 고르기
 const rainIdx = await page.locator('.game-card').evaluateAll((els) => els.findIndex((el) => el.textContent.includes('고구마 비')));
 for (let i = 0; i < rainIdx; i++) await page.keyboard.press('ArrowRight');
@@ -533,6 +594,8 @@ const page2 = await browser.newPage({ viewport: { width: W, height: H } });
 page2.on('pageerror', (e) => errors.push(String(e)));
 await page2.clock.install();
 await page2.goto(`${BASE}/index.html`);
+await seedRecords(page2);
+await page2.reload();
 await openPage(page2, 1);
 const rainIdx2 = await page2.locator('.game-card').evaluateAll((els) => els.findIndex((el) => el.textContent.includes('고구마 비')));
 for (let i = 0; i < rainIdx2; i++) await page2.keyboard.press('ArrowRight');

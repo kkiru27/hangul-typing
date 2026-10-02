@@ -14,6 +14,7 @@ import { VERSION } from './version.js';
 import { Chunsik, GOGUMA_SVG } from './chunsik-view.js';
 import { checkForUpdate } from './update-check.js';
 import { RainGame } from './game-rain.js';
+import { DigGame } from './game-dig.js';
 import { Sound } from './sound.js';
 import { loadSettings, saveSettings } from './settings.js';
 
@@ -54,6 +55,7 @@ const state = {
   levelSel: 0,         // 레벨 목록에서 고른 레벨 (0부터)
   level: null,         // 게임 중이면 지금 레벨 (lessons.js gameLevel)
   combo: 0,            // 게임: 연달아 잡은 수
+  digLen: 0,           // 고구마 캐기: 입력칸에서 이미 낸 키 수
   bestCombo: 0,
   stageIdx: 0,
   stage: STAGES[0],
@@ -854,8 +856,78 @@ function renderRain() {
   $('track').style.setProperty('--p', game.resolved / game.total);
 }
 
+// ───── 게임: 고구마 캐기 (쏙 나온 고구마의 글자 키를 하나씩) ─────
+
+function startDig(level) {
+  gameCs.say('춘춘! (고구마가 나오면 그 글자 키를 눌러 줘!)');
+  state.digLen = 0;
+  state.game = new DigGame($('rain'), {
+    keys: levelKeys(level.n),
+    total: level.total,
+    stay: level.stay,
+    every: level.every,
+    max: level.max,
+    onSpawn: renderGame,
+    onHit: () => {
+      sound.play('catch');
+      gameCs.pose('goguma');
+      gameCs.act('hop');
+      gameCs.say(pick(['츈츈! (쏙! 캤다!)', '춘춘! (맛있겠다!)', '춘! (하나 더!)', '츈~ (고구마 부자!)']), 'good');
+      comboUp();
+      hopRunner();
+      setTimeout(() => state.screen === 'game' && gameCs.pose('stand'), 700);
+      renderGame();
+    },
+    onMiss: (g) => {
+      sound.play('drop');
+      comboBreak();
+      gameCs.pose('sad');
+      gameCs.say(`츄... (${g.key} 고구마가 들어가 버렸어...)`, 'bad');
+      setTimeout(() => state.screen === 'game' && gameCs.pose('stand'), 900);
+      renderGame();
+    },
+    onEnd: ({ hits, missed, wrong, total }) => endGame({
+      hits, total, label: '캔 고구마', lines: [`놓친 고구마 <b>${missed}</b>개`, `틀린 키 <b>${wrong}</b>번`],
+    }),
+  });
+}
+
+// 새로 눌린 키만 하나씩 낸다. 입력기가 ㅁ+ㅏ → 마로 묶어도 키 순서는 그대로라 마지막 키만 보면 된다
+function onDigInput({ keys }) {
+  const fresh = keys.slice(state.digLen);
+  state.digLen = keys.length;
+  for (const k of fresh) {
+    if (k === ' ' || !isHangul(k)) continue;
+    if (state.warn === 'english') setWarn(null);
+    const code = keyFor(k)?.code;
+    if (state.game.press(k)) {
+      if (code) keyboard.flash(code, 'ok');
+    } else {
+      sound.play('miss');
+      comboBreak();
+      if (code) keyboard.flash(code, 'bad');
+      gameCs.say(`춘? (${k} 고구마는 없어!)`, 'bad');
+    }
+  }
+  bridge.rebase(); // 입력칸이 길어지지 않게 (조합 중이면 시작 위치만 옮김)
+  state.digLen = 0;
+  renderGame();
+}
+
+function renderDig() {
+  const game = state.game;
+  const target = state.level.hint ? game.oldest() : null;
+  const codes = state.warn === 'english' ? ['CapsLock'] : target ? codesFor(target.key) : [];
+  keyboard.setNext(codes, state.warn === 'english' ? 'warn' : 'finger');
+  hands.setTargets(codes);
+  $('progress').textContent = `${game.hits}/${game.total}`;
+  $('accuracy').textContent = pct(game.resolved ? game.hits / game.resolved : null);
+  $('track').style.setProperty('--p', game.resolved / game.total);
+}
+
 // 게임 종류별: 시작 · 입력 · 그리기
 const GAME_KINDS = {
+  dig: { start: startDig, input: onDigInput, render: renderDig },
   rain: { start: startRain, input: onRainInput, render: renderRain },
 };
 

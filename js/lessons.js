@@ -419,7 +419,20 @@ export const LEVEL_RANGES = [
 
 export const GAMES = [
   {
-    id: 'game-rain', type: 'rain', group: '게임', name: '고구마 비', unlock: 0,
+    id: 'game-dig', type: 'dig', group: '게임', name: '고구마 캐기', unlock: 0,
+    preview: '🌱 쏙 나온 글자 키 누르기',
+    tip: '구멍에서 고구마가 쏙 나오면 적힌 글자 키를 눌러 캐요. 낱말을 몰라도 할 수 있어요!',
+    // stay: 올라와 있는 시간(ms), every: 다음 고구마까지(ms), max: 한 번에 올라와 있는 개수, hint: 칠 키를 키보드에 보여 줌
+    levels: [
+      { desc: '하나씩 천천히', total: 16, stay: 4500, every: 1800, max: 1, hint: true },
+      { desc: '두 개까지', total: 20, stay: 3800, every: 1500, max: 2, hint: true },
+      { desc: '조금 빨리', total: 22, stay: 3200, every: 1300, max: 2, hint: true },
+      { desc: '빨리 · 세 개까지', total: 24, stay: 2800, every: 1100, max: 3, hint: true },
+      { desc: '아주 빨리! 힌트 없이', total: 28, stay: 2200, every: 850, max: 3, hint: false },
+    ],
+  },
+  {
+    id: 'game-rain', type: 'rain', group: '게임', name: '고구마 비', unlock: 6,
     preview: '🍠 떨어지는 낱말 잡기',
     tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요. 연달아 잡으면 콤보!',
     // fall: 떨어지는 데 걸리는 시간(처음 → 끝, ms), gap: 다음 고구마까지(처음 → 끝), max: 한 번에 떠 있는 개수
