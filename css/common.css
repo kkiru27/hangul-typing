@@ -57,10 +57,10 @@ kbd {
 
 /* ───── 가상 키보드 ───── */
 .kbd {
-  --u: min(calc((100vw - 28px) / 16), 74px);
+  --u: min(calc((100vw - 28px) / var(--units, 16)), 74px);
   --gap: 5px;
-  --kh: min(calc(var(--u) * .8), 7.4dvh);
-  width: calc(var(--u) * 16);
+  --kh: min(calc(var(--u) * .8), 6.5dvh); /* 기능키 줄(반 칸 높이)이 있어서 전체 높이가 예전(7.4dvh × 5줄)과 비슷하게 */
+  width: calc(var(--u) * var(--units, 16));
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -84,6 +84,13 @@ kbd {
   transition: opacity .2s, transform .12s, background .15s;
 }
 .key.nav { --c: var(--none); --c-soft: #f7f3ee; }
+/* K380 맨 윗줄: 작은 기능키 (esc ~ del) */
+.fn-row .key { height: calc(var(--kh) * .5); border-bottom-width: 3px; border-radius: 7px; }
+.fn-row .key .k-label { font-size: calc(var(--kh) * .2); }
+/* 위아래 반 칸짜리 ↑ ↓ */
+.key-stack { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; width: calc(var(--u) * var(--w) - var(--gap)); height: var(--kh); }
+.key-stack .key { width: 100%; height: calc((var(--kh) - 2px) / 2); border-bottom-width: 2px; border-radius: 6px; }
+.key-stack .key .k-icon { font-size: calc(var(--kh) * .22); }
 .key .k-main { font-size: calc(var(--kh) * .42); font-weight: 700; line-height: 1; }
 .key.sym .k-main { font-size: calc(var(--kh) * .36); }
 .key .k-latin { position: absolute; top: 4px; left: 6px; font-size: calc(var(--kh) * .2); color: var(--muted); font-weight: 600; }

@@ -1,18 +1,28 @@
-// 화면 아래 가상 키보드 (AULA F65 배열 그대로)
+// 화면 아래 가상 키보드 (로지텍 K380 배열 그대로)
 
-import { ROWS, fingerTone } from './layout.js?v=202609280535';
+import { ROWS, KBD_UNITS, fingerTone } from './layout.js?v=202610020536';
 
 export class KeyboardView {
   constructor(container) {
     this.el = container;
     this.keys = new Map();
     this.el.classList.add('kbd');
+    this.el.style.setProperty('--units', KBD_UNITS);
     for (const row of ROWS) {
       const rowEl = document.createElement('div');
-      rowEl.className = 'kbd-row';
-      for (const key of row) rowEl.appendChild(this.#makeKey(key));
+      rowEl.className = row.fn ? 'kbd-row fn-row' : 'kbd-row';
+      for (const key of row) rowEl.appendChild(key.stack ? this.#makeStack(key) : this.#makeKey(key));
       this.el.appendChild(rowEl);
     }
+  }
+
+  // 한 칸에 위아래 반 칸짜리 키 두 개 (K380의 ↑ ↓)
+  #makeStack(key) {
+    const el = document.createElement('div');
+    el.className = 'key-stack';
+    el.style.setProperty('--w', key.w);
+    for (const half of key.stack) el.appendChild(this.#makeKey(half));
+    return el;
   }
 
   #makeKey(key) {
@@ -51,7 +61,7 @@ export class KeyboardView {
     for (const [code, el] of this.keys) el.classList.toggle('dim', !!set && !set.has(code));
   }
 
-  // 다음에 칠 키 강조 (여러 개 가능: Shift+ㅃ, Fn+W)
+  // 다음에 칠 키 강조 (여러 개 가능: Shift+ㅃ)
   setNext(codes = [], tone = 'finger') {
     for (const el of this.keys.values()) el.classList.remove('next', 'next-warn');
     for (const code of codes) {

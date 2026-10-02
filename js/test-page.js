@@ -1,11 +1,11 @@
 // 입력 테스트 페이지: 아이패드 사파리가 한글 입력을 어떤 이벤트로 주는지 기록하고,
 // 앱과 같은 판정기(Judge + InputBridge)가 제대로 도는지 확인한다.
 
-import { Judge } from './judge.js?v=202609280535';
-import { InputBridge } from './input-bridge.js?v=202609280535';
-import { toKeys, isHangul } from './hangul.js?v=202609280535';
-import { VERSION, BUILD } from './version.js?v=202609280535';
-import { checkForUpdate } from './update-check.js?v=202609280535';
+import { Judge } from './judge.js?v=202610020536';
+import { InputBridge } from './input-bridge.js?v=202610020536';
+import { toKeys, isHangul } from './hangul.js?v=202610020536';
+import { VERSION, BUILD } from './version.js?v=202610020536';
+import { checkForUpdate } from './update-check.js?v=202610020536';
 
 const $ = (id) => document.getElementById(id);
 const input = $('ime');

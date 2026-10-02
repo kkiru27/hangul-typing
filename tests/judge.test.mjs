@@ -4,7 +4,7 @@ import { toKeys, toUnits, objParticle, josa, charName } from '../js/hangul.js';
 import { gogumaFor, gogumaForTest, saveStageResult, suggestStage, gameWordStages, totalGoguma } from '../js/records.js';
 import { Judge } from '../js/judge.js';
 import { STAGES, GAMES, gameTitle, buildKeysRound, hasRiskyPair, stageChars, stageTitle, stageItems, shuffleItems, itemsForRound } from '../js/lessons.js';
-import { keyFor, codesFor, ROWS } from '../js/layout.js';
+import { keyFor, codesFor, ROWS, KEYS, KBD_UNITS } from '../js/layout.js';
 import { ImeSim, typeAll } from './ime-sim.mjs';
 
 test('글자 → 키 순서', () => {
@@ -309,12 +309,18 @@ test('고구마와 골라 둘 단계', () => {
   assert.equal(suggestStage(STAGES, { [STAGES[lastI].id]: { goguma: 2, lastAt: 1 } }), lastI);
 });
 
-test('F65 배열: 줄마다 16칸, 67키, 자모마다 키가 있음', () => {
-  for (const row of ROWS) assert.equal(row.reduce((s, k) => s + k.w, 0), 16);
-  assert.equal(ROWS.flat().length, 67);
+test('K380 배열: 줄마다 15칸, 기능키 줄, 자모마다 키가 있음', () => {
+  for (const row of ROWS) assert.equal(row.reduce((s, k) => s + k.w, 0), KBD_UNITS);
+  assert.equal(KBD_UNITS, 15);
+  assert.ok(ROWS[0].fn && ROWS[0][0].code === 'Escape' && ROWS[0].at(-1).code === 'Delete', '맨 윗줄: esc ~ del');
+  assert.equal(ROWS[1][0].code, 'Backquote', '1 왼쪽에 ` 키');
+  const codes = KEYS.map((key) => key.code);
+  assert.equal(new Set(codes).size, codes.length, '키 코드 중복 없음');
+  for (const c of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Fn', 'Space']) assert.ok(codes.includes(c), c);
+  for (const c of ['PageUp', 'PageDown', 'End']) assert.ok(!codes.includes(c), `K380에는 ${c} 없음`);
   for (const j of 'ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡㅃㅉㄸㄲㅆㅒㅖ') assert.ok(keyFor(j), j);
   assert.deepEqual(codesFor('ㅁ'), ['KeyA']);
   assert.deepEqual(codesFor('ㅃ'), ['ShiftRight', 'KeyQ']);
   assert.deepEqual(codesFor('?'), ['ShiftLeft', 'Slash']);
-  assert.equal(keyFor('`'), null);
+  assert.deepEqual(codesFor('`'), ['Backquote']);
 });

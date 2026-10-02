@@ -73,6 +73,11 @@ check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete &&
 check(await pageOf(page) === 'menu' && await page.locator('.menu-card').count() === 2, '처음 화면: 타자 연습 / 게임 두 갈래');
 check((await text('.menu-card.selected')).includes('타자 연습') && (await text('#homeChunsik .cs-bubble')).includes('게임할까'), '처음엔 타자 연습이 골라져 있고 춘식이가 물어봄');
 check(await page.locator('#navBtn').isHidden() && await page.locator('#brand').isVisible(), '처음 화면: 왼쪽 위는 앱 이름');
+check(await page.locator('.fn-row .key').count() === 15 && await page.locator('.key[data-code="Backquote"]').count() === 1
+  && await page.locator('.key-stack .key').count() === 2 && await page.locator('.key[data-code="PageUp"]').count() === 0, '가상 키보드: K380 배열 (기능키 줄, ` 키, 반 칸 ↑↓, PgUp 없음)');
+const kbdBox = await page.locator('#keyboard').boundingBox();
+const rows = await page.locator('.kbd-row').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width)));
+check(rows.every((w) => Math.abs(w - rows[1]) <= 2) && kbdBox.x + kbdBox.width <= W, `키보드 줄 너비가 같고 화면 안 (${rows.join(',')})`);
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/00-menu.png` });
 await page.keyboard.press('Enter');
@@ -145,14 +150,11 @@ await page.screenshot({ path: `${OUT}/04-english.png` });
 for (const k of targets.slice(3, 5)) await press(k);
 check(!(await page.locator('#banner').isVisible()), '한글 들어오면 경고 사라짐');
 
-// Fn+W: WASD 자리를 쳐야 할 때 방향키
+// K380: 방향키를 눌러도 경고 없음 (F65의 Fn+W 안내는 없앰)
 const idx = targets.findIndex((t, i) => i >= 5 && ['ㅁ', 'ㄴ', 'ㅇ'].includes(t));
 for (const k of targets.slice(5, idx)) await press(k);
 await page.keyboard.press('ArrowLeft');
-check((await text('#bannerText')).includes('Fn+W'), 'WASD 자리에서 방향키 → Fn+W 안내');
-check((await page.locator('#guideJamo').textContent()) === 'Fn+W', '안내 카드(숨김 상태)도 Fn+W로 바뀜');
-await page.waitForTimeout(500);
-await page.screenshot({ path: `${OUT}/05-fnw.png` });
+check(await page.locator('#banner').isHidden() && !(await text('#guideJamo')).includes('Fn'), '방향키를 눌러도 경고 없음');
 
 // 나머지 끝까지
 for (const k of targets.slice(idx)) await press(k);

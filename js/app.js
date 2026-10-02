@@ -2,18 +2,18 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js?v=202609280535';
-import { InputBridge } from './input-bridge.js?v=202609280535';
-import { KeyboardView } from './keyboard-view.js?v=202609280535';
-import { HandsView } from './hands-view.js?v=202609280535';
-import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, shuffleItems, itemsForRound } from './lessons.js?v=202609280535';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, WASD, ARROWS } from './layout.js?v=202609280535';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202609280535';
-import { loadRecords, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202609280535';
-import { VERSION } from './version.js?v=202609280535';
-import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202609280535';
-import { checkForUpdate } from './update-check.js?v=202609280535';
-import { RainGame } from './game-rain.js?v=202609280535';
+import { Judge } from './judge.js?v=202610020536';
+import { InputBridge } from './input-bridge.js?v=202610020536';
+import { KeyboardView } from './keyboard-view.js?v=202610020536';
+import { HandsView } from './hands-view.js?v=202610020536';
+import { STAGES, GAMES, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, shuffleItems, itemsForRound } from './lessons.js?v=202610020536';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone } from './layout.js?v=202610020536';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610020536';
+import { loadRecords, saveStageResult, suggestStage, gameWordStages, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610020536';
+import { VERSION } from './version.js?v=202610020536';
+import { Chunsik, GOGUMA_SVG } from './chunsik-view.js?v=202610020536';
+import { checkForUpdate } from './update-check.js?v=202610020536';
+import { RainGame } from './game-rain.js?v=202610020536';
 
 const $ = (id) => document.getElementById(id);
 
@@ -54,13 +54,12 @@ const state = {
   testStart: 0,        // 타자 검정: 첫 키를 친 시각
   testTimer: 0,
   results: [],
-  warn: null,          // english | fnw | focus | null
+  warn: null,          // english | focus | null
   streak: 0,           // 연속으로 맞힌 키 (춘식이 칭찬용)
   input: { raw: '', base: 0, composing: false }, // 입력칸 값 (친 글자 막대용)
   idleTimer: 0,
   paused: null,        // 일시정지 중이면 { at: 멈춘 시각, sel: 고른 항목 }
   game: null,          // 고구마 비 게임
-  gameNext: null,      // 게임에서 다음에 칠 글자 (Fn+W 안내용)
 };
 
 // ───── 화면 전환 ─────
@@ -255,7 +254,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609280535';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610020536';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -319,7 +318,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202609280535';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610020536';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -497,7 +496,7 @@ function startGame(i) {
   $('roundLabel').textContent = gameTitle(stage);
   $('stageLabel').textContent = gameTitle(stage);
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202609280535';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610020536';
   show('game');
   gameCs.pose('stand');
   gameCs.say('츈츈! (떨어지는 고구마를 잡아 줘!)');
@@ -537,8 +536,8 @@ function startGame(i) {
 function onGameInput({ raw, base, keys, composing }) {
   const prevLen = toKeys(state.input.raw).length - state.input.base;
   state.input = { raw, base, composing };
-  // 새로 친 키가 한글이면 영어 모드·Fn+W 경고를 걷고 게임을 다시 움직인다
-  if ((state.warn === 'english' || state.warn === 'fnw') && keys.length > prevLen && isHangul(keys.at(-1))) setWarn(null);
+  // 새로 친 키가 한글이면 영어 모드 경고를 걷고 게임을 다시 움직인다
+  if (state.warn === 'english' && keys.length > prevLen && isHangul(keys.at(-1))) setWarn(null);
   if (keys.at(-1) === ' ') return submitGameWord();
   renderGame();
 }
@@ -583,15 +582,13 @@ function renderGame() {
 
   // 다음에 칠 키: 가장 아래 고구마(또는 치고 있는 고구마)의 다음 글자, 다 쳤으면 스페이스
   let codes = [];
-  state.gameNext = null;
   if (state.warn === 'english') codes = ['CapsLock'];
-  else if (state.warn === 'fnw') codes = ['Fn', 'KeyW'];
   else if (bad) codes = ['Backspace'];
   else if (target) {
-    state.gameNext = target.keys[typed.length] ?? ' ';
-    codes = state.gameNext === ' ' ? ['Space'] : codesFor(state.gameNext);
+    const next = target.keys[typed.length] ?? ' ';
+    codes = next === ' ' ? ['Space'] : codesFor(next);
   }
-  keyboard.setNext(codes, state.warn === 'english' || state.warn === 'fnw' ? 'warn' : 'finger');
+  keyboard.setNext(codes, state.warn === 'english' ? 'warn' : 'finger');
   hands.setActive(codes.map((c) => FINGER_BY_CODE[c]).filter(Boolean));
 
   $('progress').textContent = `${game.caught}/${game.total}`;
@@ -635,7 +632,7 @@ function onChange({ raw, base, keys, composing }) {
   if (state.stage.type === 'test' && !state.testStart && events.length) startTestTimer();
   for (const ev of events) {
     if (ev.kind === 'latin') continue;
-    if (isHangul(ev.key) && (state.warn === 'english' || state.warn === 'fnw')) setWarn(null);
+    if (isHangul(ev.key) && state.warn === 'english') setWarn(null);
     const code = keyFor(ev.key)?.code;
     if (ev.kind === 'ok' || ev.kind === 'retype') {
       if (code) keyboard.flash(code, 'ok');
@@ -712,15 +709,9 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'Escape') goBack();
   } else if (state.screen === 'play') {
     resetIdle();
-    if (ARROWS.has(e.key) && !state.judge.hasError) {
-      // F65에서 Fn+W가 켜지면 W A S D 자리가 방향키로 바뀐다
-      const next = keyFor(state.judge.nextKey)?.code;
-      if (WASD.has(next)) setWarn('fnw');
-    }
     if (e.key === 'Enter' && state.awaitNext && !e.repeat) finishItem();
     if (e.key === 'Escape' && !e.repeat) pause();
   } else if (state.screen === 'game') {
-    if (ARROWS.has(e.key) && WASD.has(keyFor(state.gameNext)?.code)) setWarn('fnw');
     if (e.key === 'Enter' && !e.repeat) setTimeout(submitGameWord, 30); // 조합이 확정된 뒤 읽는다
     if (e.key === 'Escape' && !e.repeat) pause();
   } else if (!$('resultScreen').hidden) {
@@ -760,7 +751,6 @@ document.addEventListener('visibilitychange', () => {
 
 const WARNINGS = {
   english: { icon: '🔤', text: '지금 영어로 입력돼요. Caps Lock을 눌러 한글로 바꿔요', chunsik: '춘?! (어? 영어가 나와!)' },
-  fnw: { icon: '⌨️', text: 'Fn+W가 눌린 것 같아요. Fn+W를 한 번 더 눌러주세요', chunsik: '츈츈?! (어? 방향키가 나와!)' },
   focus: { icon: '👆', text: '화면을 한 번 톡 눌러 주세요', chunsik: '춘춘~ (나를 톡 눌러 줘!)' },
 };
 
@@ -824,15 +814,12 @@ function render() {
   }
 
   // 다음에 칠 키 / 손가락 안내
-  //   경고 중이면 고치는 키(Caps Lock, Fn+W)를, 틀렸으면 Backspace를, 아니면 목표 키를 가리킨다
+  //   경고 중이면 고치는 키(Caps Lock)를, 틀렸으면 Backspace를, 아니면 목표 키를 가리킨다
   let codes;
   let guide;
   if (state.warn === 'english') {
     codes = ['CapsLock'];
     guide = { big: '한/영', small: 'Caps Lock', finger: 'L5' };
-  } else if (state.warn === 'fnw') {
-    codes = ['Fn', 'KeyW'];
-    guide = { big: 'Fn+W', small: '한 번 더', finger: null, fingerText: 'Fn을 누른 채 W' };
   } else if (judge.hasError) {
     codes = ['Backspace'];
     guide = { big: '⌫', small: 'Backspace', finger: 'R5' };
@@ -853,7 +840,7 @@ function render() {
       ? { big: judge.nextKey, small: `Shift + ${KEY_LABEL[main]}`, finger: FINGER_BY_CODE[main], fingerText: `${FINGER_NAMES[FINGER_BY_CODE[main]]} + Shift` }
       : { big: judge.nextKey, small: `${KEY_LABEL[main] ?? ''} 자리`, finger: FINGER_BY_CODE[main] };
   }
-  keyboard.setNext(codes, state.warn === 'english' || state.warn === 'fnw' ? 'warn' : 'finger');
+  keyboard.setNext(codes, state.warn === 'english' ? 'warn' : 'finger');
   hands.setActive(guide.finger ? codes.map((c) => FINGER_BY_CODE[c]).filter(Boolean) : []);
 
   const tone = `tone-${fingerTone(guide.finger)}`;

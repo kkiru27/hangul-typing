@@ -1,5 +1,6 @@
-// AULA F65 (65%, 67키) 배열과 두벌식 자모, 손가락 배정.
-// w = 키 너비(1 = 보통 키 한 칸). 한 줄 합계는 16칸.
+// 로지텍 K380 배열과 두벌식 자모, 손가락 배정.
+// 글자 키 부분은 보통 키보드(미국식 배열)와 같고, 위에 작은 기능키 줄, 아래 줄 오른쪽에 작은 방향키(↑↓는 위아래 반 칸).
+// w = 키 너비(1 = 보통 키 한 칸). 한 줄 합계는 KBD_UNITS(15)칸.
 
 // 두벌식: 키 코드 → [기본 자모, Shift 자모]
 export const JAMO_BY_CODE = {
@@ -10,9 +11,9 @@ export const JAMO_BY_CODE = {
   KeyZ: ['ㅋ'], KeyX: ['ㅌ'], KeyC: ['ㅊ'], KeyV: ['ㅍ'], KeyB: ['ㅠ'], KeyN: ['ㅜ'], KeyM: ['ㅡ'],
 };
 
-// 문장부호·숫자: 키 코드 → [기본, Shift]  (` ~ 는 F65에서 Fn 조합이라 연습에서 뺀다)
+// 문장부호·숫자: 키 코드 → [기본, Shift]
 const SYMBOL_BY_CODE = {
-  Digit1: ['1', '!'], Digit2: ['2', '@'], Digit3: ['3', '#'], Digit4: ['4', '$'], Digit5: ['5', '%'],
+  Backquote: ['`', '~'], Digit1: ['1', '!'], Digit2: ['2', '@'], Digit3: ['3', '#'], Digit4: ['4', '$'], Digit5: ['5', '%'],
   Digit6: ['6', '^'], Digit7: ['7', '&'], Digit8: ['8', '*'], Digit9: ['9', '('], Digit0: ['0', ')'],
   Minus: ['-', '_'], Equal: ['=', '+'], BracketLeft: ['[', '{'], BracketRight: [']', '}'],
   Backslash: ['\\', '|'], Semicolon: [';', ':'], Quote: ["'", '"'],
@@ -21,7 +22,7 @@ const SYMBOL_BY_CODE = {
 
 // 손가락: L/R + 5(새끼) 4(약지) 3(중지) 2(검지), T = 엄지
 export const FINGER_BY_CODE = {
-  Escape: 'L5', Digit1: 'L5', Tab: 'L5', KeyQ: 'L5', CapsLock: 'L5', KeyA: 'L5', ShiftLeft: 'L5', KeyZ: 'L5', ControlLeft: 'L5',
+  Escape: 'L5', Backquote: 'L5', Digit1: 'L5', Tab: 'L5', KeyQ: 'L5', CapsLock: 'L5', KeyA: 'L5', ShiftLeft: 'L5', KeyZ: 'L5', ControlLeft: 'L5',
   Digit2: 'L4', KeyW: 'L4', KeyS: 'L4', KeyX: 'L4',
   Digit3: 'L3', KeyE: 'L3', KeyD: 'L3', KeyC: 'L3',
   Digit4: 'L2', Digit5: 'L2', KeyR: 'L2', KeyT: 'L2', KeyF: 'L2', KeyG: 'L2', KeyV: 'L2', KeyB: 'L2',
@@ -30,7 +31,7 @@ export const FINGER_BY_CODE = {
   Digit9: 'R4', KeyO: 'R4', KeyL: 'R4', Period: 'R4',
   Digit0: 'R5', Minus: 'R5', Equal: 'R5', Backspace: 'R5', KeyP: 'R5', BracketLeft: 'R5', BracketRight: 'R5',
   Backslash: 'R5', Semicolon: 'R5', Quote: 'R5', Enter: 'R5', Slash: 'R5', ShiftRight: 'R5',
-  Space: 'T', AltLeft: 'T', AltRight: 'T',
+  Space: 'T', MetaLeft: 'T', MetaRight: 'T',
 };
 
 export const FINGER_NAMES = {
@@ -47,16 +48,25 @@ export function fingerTone(finger) {
 }
 
 const k = (code, w, extra = {}) => ({ code, w, ...extra });
+const fkey = (n) => k(`F${n}`, 1, { label: `F${n}`, nav: true });
+
+export const KBD_UNITS = 15;
 
 // 화면에 그릴 배열. label: 영문 각인, 나머지 표시는 JAMO/SYMBOL 표에서 채운다.
+// fn: 작은 기능키 줄. stack: 한 칸에 위아래로 반 칸짜리 키 두 개 (↑ ↓)
 export const ROWS = [
+  Object.assign([
+    k('Escape', 1, { label: 'esc' }),
+    ...Array.from({ length: 12 }, (_, i) => fkey(i + 1)),
+    k('Insert', 1, { label: 'ins', nav: true }),
+    k('Delete', 1, { label: 'del', nav: true }),
+  ], { fn: true }),
   [
-    k('Escape', 1, { label: 'Esc' }),
+    k('Backquote', 1),
     k('Digit1', 1), k('Digit2', 1), k('Digit3', 1), k('Digit4', 1), k('Digit5', 1),
     k('Digit6', 1), k('Digit7', 1), k('Digit8', 1), k('Digit9', 1), k('Digit0', 1),
     k('Minus', 1), k('Equal', 1),
     k('Backspace', 2, { label: 'Backspace', icon: '⌫' }),
-    k('Delete', 1, { label: 'Del', nav: true }),
   ],
   [
     k('Tab', 1.5, { label: 'Tab' }),
@@ -65,7 +75,6 @@ export const ROWS = [
     k('KeyO', 1, { label: 'O' }), k('KeyP', 1, { label: 'P' }),
     k('BracketLeft', 1), k('BracketRight', 1),
     k('Backslash', 1.5),
-    k('PageUp', 1, { label: 'PgUp', nav: true }),
   ],
   [
     k('CapsLock', 1.75, { label: 'Caps Lock', hint: '한/영' }),
@@ -74,36 +83,35 @@ export const ROWS = [
     k('KeyL', 1, { label: 'L' }),
     k('Semicolon', 1), k('Quote', 1),
     k('Enter', 2.25, { label: 'Enter', icon: '⏎' }),
-    k('PageDown', 1, { label: 'PgDn', nav: true }),
   ],
   [
     k('ShiftLeft', 2.25, { label: 'Shift', icon: '⇧' }),
     k('KeyZ', 1, { label: 'Z' }), k('KeyX', 1, { label: 'X' }), k('KeyC', 1, { label: 'C' }), k('KeyV', 1, { label: 'V' }),
     k('KeyB', 1, { label: 'B' }), k('KeyN', 1, { label: 'N' }), k('KeyM', 1, { label: 'M' }),
     k('Comma', 1), k('Period', 1), k('Slash', 1),
-    k('ShiftRight', 1.75, { label: 'Shift', icon: '⇧' }),
-    k('ArrowUp', 1, { icon: '↑', nav: true }),
-    k('End', 1, { label: 'End', nav: true }),
+    k('ShiftRight', 2.75, { label: 'Shift', icon: '⇧' }),
   ],
   [
-    k('ControlLeft', 1.25, { label: 'Ctrl' }),
-    k('MetaLeft', 1.25, { label: 'Win' }),
-    k('AltLeft', 1.25, { label: 'Alt' }),
-    k('Space', 6.25, { label: '스페이스' }),
-    k('AltRight', 1.5, { label: 'Alt' }),
-    k('Fn', 1.5, { label: 'Fn' }),
+    k('ControlLeft', 1, { label: 'ctrl' }),
+    k('Fn', 1, { label: 'fn' }),
+    k('AltLeft', 1, { label: 'opt' }),
+    k('MetaLeft', 1.25, { label: 'cmd' }),
+    k('Space', 5.5, { label: '스페이스' }),
+    k('MetaRight', 1.25, { label: 'cmd' }),
+    k('AltRight', 1, { label: 'opt' }),
     k('ArrowLeft', 1, { icon: '←', nav: true }),
-    k('ArrowDown', 1, { icon: '↓', nav: true }),
+    k('ArrowStack', 1, { stack: [k('ArrowUp', 1, { icon: '↑', nav: true }), k('ArrowDown', 1, { icon: '↓', nav: true })] }),
     k('ArrowRight', 1, { icon: '→', nav: true }),
   ],
 ];
 
-for (const row of ROWS) {
-  for (const key of row) {
-    key.jamo = JAMO_BY_CODE[key.code] || null;
-    key.symbol = SYMBOL_BY_CODE[key.code] || null;
-    key.finger = FINGER_BY_CODE[key.code] || null;
-  }
+// 화면에 그려지는 키 하나하나 (↑↓처럼 한 칸에 두 개 있는 키도 따로)
+export const KEYS = ROWS.flat().flatMap((key) => key.stack || [key]);
+
+for (const key of KEYS) {
+  key.jamo = JAMO_BY_CODE[key.code] || null;
+  key.symbol = SYMBOL_BY_CODE[key.code] || null;
+  key.finger = FINGER_BY_CODE[key.code] || null;
 }
 
 // 글자(키 하나) → { code, shift }
@@ -116,9 +124,7 @@ CHAR_TO_KEY.set(' ', { code: 'Space', shift: false });
 
 // 키 이름 (안내 카드의 "F 자리", "Shift + R" 같은 글자)
 export const KEY_LABEL = {};
-for (const row of ROWS) {
-  for (const key of row) KEY_LABEL[key.code] = key.symbol ? key.symbol[0] : key.label || key.code;
-}
+for (const key of KEYS) KEY_LABEL[key.code] = key.symbol ? key.symbol[0] : key.label || key.code;
 KEY_LABEL.Space = '스페이스';
 
 export function keyFor(char) {
@@ -133,7 +139,3 @@ export function codesFor(char) {
   const hand = (FINGER_BY_CODE[key.code] || 'L')[0];
   return [hand === 'L' ? 'ShiftRight' : 'ShiftLeft', key.code];
 }
-
-// WASD 자리 (F65는 Fn+W로 이 네 키와 방향키가 서로 바뀐다)
-export const WASD = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
-export const ARROWS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
