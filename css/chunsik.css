@@ -25,15 +25,11 @@
   transform-origin: 50% 90%;
   -webkit-user-drag: none; user-select: none; -webkit-user-select: none;
 }
-/* 서 있는 그림은 여백이 넓어서 조금 크게 */
+/* 서 있는 그림은 여백이 넓어서 조금 크게 (한 번 하는 몸짓·말풍선 튀기는 js/motion.js) */
 .chunsik[data-pose="stand"] .cs-img { height: calc(var(--cs-h) * 1.18); margin: calc(var(--cs-h) * -.09) 0; }
-.cs-img.hop   { animation: cs-hop .34s ease-out; }
-.cs-img.oops  { animation: cs-oops .5s ease-in-out; }
-.cs-img.cheer { animation: cs-cheer .8s ease-in-out 2; }
 
 .cs-fx { position: absolute; top: 4%; right: 2%; width: calc(var(--cs-h) * .24); height: calc(var(--cs-h) * .24); opacity: 0; }
 .cs-fx svg { display: block; width: 100%; height: 100%; }
-.cs-fx.show { animation: cs-fx 1s ease-out; }
 
 /* 말풍선 (빈 칸도 자리를 차지해서 화면이 흔들리지 않게): 흰 풍선 + 부드러운 그림자(꼬리까지 한 덩어리로) */
 .cs-bubble {
@@ -57,7 +53,6 @@
 .cs-bubble[data-tone="good"] { background: #eefaf3; color: #15704a; }
 .cs-bubble[data-tone="bad"]  { background: #fff0f0; color: #c9353a; }
 .cs-bubble[data-tone="warn"] { background: #fff7de; color: var(--warn-ink); }
-.cs-bubble.pop { animation: cs-pop .3s var(--spring); }
 .cs-l .cs-bubble { font-size: 20px; padding: 8px 18px; }
 /* 춘식이 말 + (해석) */
 .cs-meow { display: block; font-weight: 900; letter-spacing: .5px; }
@@ -65,11 +60,6 @@
 
 @keyframes cs-bob   { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes cs-party { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-14px) rotate(-6deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-14px) rotate(6deg); } }
-@keyframes cs-hop   { 0% { transform: none; } 30% { transform: scale(1.05, .92); } 60% { transform: translateY(-16px) scale(.97, 1.04); } 100% { transform: none; } }
-@keyframes cs-oops  { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-10deg); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(3deg); } }
-@keyframes cs-cheer { 0%, 100% { transform: none; } 25% { transform: translateY(-22px) rotate(-8deg); } 50% { transform: none; } 75% { transform: translateY(-22px) rotate(8deg); } }
-@keyframes cs-fx    { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-14px); } }
-@keyframes cs-pop   { 0% { transform: scale(.85); } 70% { transform: scale(1.05); } 100% { transform: none; } }
 
 /* 고구마까지 가는 길 */
 .round-head { display: flex; align-items: center; gap: 14px; }
@@ -87,7 +77,6 @@
   transition: left .3s var(--ease);
 }
 .track-runner img { display: block; height: 46px; -webkit-user-drag: none; }
-.track-runner.hop img { animation: cs-hop .3s ease-out; }
 .track-goal { position: absolute; right: 0; top: 4px; width: 46px; transition: transform .3s, opacity .3s; }
 .track-goal .goguma { width: 100%; display: block; animation: cs-bob 1.8s ease-in-out infinite; }
 .track.done .track-goal { transform: scale(.2); opacity: 0; }

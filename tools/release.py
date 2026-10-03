@@ -33,10 +33,10 @@ build = time.strftime('%Y%m%d%H%M')
 V = r'(\?v=\w+)?'
 rules = [
     (re.compile(r"""((?:from|import)\s*\(?\s*['"]\./[\w-]+\.js)""" + V + r"""(['"])"""), rf'\1?v={build}\3'),
-    (re.compile(r"""((?:href|src)=["'](?:css|js|img|fonts)/[\w./-]+?\.(?:css|js|png|woff2))""" + V + r"""(["'])"""), rf'\1?v={build}\3'),
+    (re.compile(r"""((?:href|src)=["'](?:css|js|img|fonts)/[\w./-]+?\.(?:css|js|png|webp|woff2))""" + V + r"""(["'])"""), rf'\1?v={build}\3'),
     # CSS 안의 글꼴 주소 (index.html의 preload 주소와 같아야 한 번만 받는다)
     (re.compile(r"""(url\(["']\.\./fonts/[\w.-]+\.woff2)""" + V + r"""(["']\))"""), rf'\1?v={build}\3'),
-    (re.compile(r"""(['"`]img/[\w-]+\.png)""" + V + r"""(['"`])"""), rf'\1?v={build}\3'),
+    (re.compile(r"""(['"`]img/[\w-]+\.(?:png|webp))""" + V + r"""(['"`])"""), rf'\1?v={build}\3'),
 ]
 changed = []
 for path in sorted(list(root.glob('*.html')) + list((root / 'js').glob('*.js')) + list((root / 'css').glob('*.css'))):

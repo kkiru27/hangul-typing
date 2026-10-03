@@ -20,7 +20,7 @@ export class RaceGame {
       <div class="race-words"><div class="race-next"></div><div class="race-word"></div></div>
       <div class="race-track">
       <div class="race-lane me"><span class="race-name">춘식이</span>
-        <span class="race-runner"><img src="img/chunsik.png?v=202610030913" alt="" draggable="false"></span></div>
+        <span class="race-runner"><img src="img/chunsik.webp?v=202610030921" alt="" draggable="false"></span></div>
       <div class="race-lane rival"><span class="race-name">${rivalName}</span>
         <span class="race-runner">${rival}</span></div>
       <div class="race-finish" aria-hidden="true"></div></div>`;

@@ -3,7 +3,7 @@
 // - 쳐야 할 키가 있으면 그 손가락이 손가락 색으로 바뀌고 그 키까지 뻗는다. 멀리 있는 키면 손 전체가 그쪽으로 조금 옮겨 간다.
 // - 모양은 화면에 그려진 키의 실제 자리에서 계산한다 → 배열(표준·75%·65%)과 화면 크기가 바뀌어도 맞는다.
 
-import { FINGER_BY_CODE, fingerTone } from './layout.js?v=202610030913';
+import { FINGER_BY_CODE, fingerTone } from './layout.js?v=202610030921';
 
 // 손가락: 기본자리 키, 굵기(키 한 칸 기준), 보이는 길이(줄 간격 기준)
 const FINGERS = {
@@ -166,6 +166,7 @@ export class HandsView {
 
   // codes: 지금 눌러야 할 키들 (['KeyA'], ['ShiftRight', 'KeyQ'], ['Space'] …). 빈 배열이면 기본자리에 쉬는 손
   setTargets(codes = []) {
+    if (codes.join() === this.targets.join() && this.svg.childElementCount) return; // 그대로면 다시 그리지 않는다
     this.targets = codes;
     this.render();
   }

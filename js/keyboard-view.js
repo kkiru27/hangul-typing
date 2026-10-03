@@ -1,6 +1,7 @@
 // 화면 아래 가상 키보드. 배열은 고를 수 있다 (표준 텐키리스 · 75% · 65%, layout.js LAYOUTS)
 
-import { getLayout, fingerTone } from './layout.js?v=202610030913';
+import { getLayout, fingerTone } from './layout.js?v=202610030921';
+import { play } from './motion.js?v=202610030921';
 
 export class KeyboardView {
   constructor(container, layoutId) {
@@ -84,13 +85,19 @@ export class KeyboardView {
   }
 
   // 다음에 칠 키 강조 (여러 개 가능: Shift+ㅃ)
+  // 바뀐 키만 건드린다 (키를 칠 때마다 87개 키를 모두 고치면 스타일 계산이 늘어난다. 같은 키는 빛나는 움직임도 끊기지 않게)
   setNext(codes = [], tone = 'finger') {
     this.next = { codes, tone };
-    for (const el of this.keys.values()) el.classList.remove('next', 'next-warn');
-    for (const code of codes) {
-      const el = this.keys.get(code);
-      if (el) el.classList.add(tone === 'warn' ? 'next-warn' : 'next');
+    const cls = tone === 'warn' ? 'next-warn' : 'next';
+    const els = codes.map((code) => this.keys.get(code)).filter(Boolean);
+    for (const el of this.nextEls ?? []) {
+      if (!els.includes(el)) el.classList.remove('next', 'next-warn');
     }
+    for (const el of els) {
+      el.classList.remove(cls === 'next' ? 'next-warn' : 'next');
+      el.classList.add(cls);
+    }
+    this.nextEls = els;
   }
 
   // 누른 키 움직임: kind = 'ok' | 'bad' | 'press'
@@ -98,18 +105,13 @@ export class KeyboardView {
   // Web Animations로 해서 화면 배치를 다시 계산하지 않는다 (예전엔 class를 뗐다 붙이며 매번 강제 재계산)
   flash(code, kind = 'press') {
     const el = this.keys.get(code);
-    if (!el || !el.animate || REDUCED_MOTION()) return;
+    if (!el) return;
     el._flash?.cancel();
-    try {
-      // 첫 장면만 주면 끝은 지금 CSS 모양(다음 키면 떠 있는 모양)으로 자연스럽게 돌아간다
-      el._flash = el.animate(FLASH[kind] ?? FLASH.press, { duration: kind === 'bad' ? 420 : 280, easing: 'cubic-bezier(.22,.8,.24,1)' });
-    } catch {
-      // 오래된 브라우저: 움직임 없이
-    }
+    // 첫 장면만 주면 끝은 지금 CSS 모양(다음 키면 떠 있는 모양)으로 자연스럽게 돌아간다
+    el._flash = play(el, FLASH[kind] ?? FLASH.press, { duration: kind === 'bad' ? 420 : 280, easing: 'cubic-bezier(.22,.8,.24,1)' });
   }
 }
 
-const REDUCED_MOTION = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PRESSED = 'translateY(2px) scale(.97)';
 const FLAT = '0 0 0 rgba(0, 0, 0, 0), 0 1px 2px rgba(20, 24, 40, .08)'; // 눌려서 아래 두께가 사라진 모양
 const FLASH = {

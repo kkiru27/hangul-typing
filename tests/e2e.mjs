@@ -673,5 +673,28 @@ check(await page5.locator('#resultScreen').isVisible() && (await page5.locator('
   && await page5.locator('#resultGoguma .goguma.earned').count() === 0 && (await page5.locator('#resultNote').innerText()).includes('거북이보다 먼저'), '거북이가 먼저 들어오면 짐: 고구마 0, 안내');
 await page5.close();
 
+// ── 오프라인: 한 번 열면 저장해 두고, 인터넷이 끊겨도 열린다 (sw.js · js/offline.js) ──
+{
+  const ctx = await browser.newContext({ viewport: { width: W, height: H } });
+  const p = await ctx.newPage();
+  await p.goto(`${BASE}/index.html`);
+  await p.waitForFunction(() => document.documentElement.dataset.offline === 'ready', null, { timeout: 15000 });
+  check(await p.evaluate(async () => (await caches.keys()).includes('hangul-typing-v1')), '오프라인 준비: 파일 저장소 만듦');
+  await ctx.setOffline(true);
+  await p.reload();
+  await p.waitForTimeout(800);
+  const ok = await p.evaluate(async () => {
+    await document.fonts.ready;
+    const img = document.querySelector('#homeChunsik .cs-img');
+    return document.querySelectorAll('.menu-card').length === 2 && img.complete && img.naturalWidth > 0
+      && [...document.fonts].some((f) => f.family.replace(/"/g, '') === 'AppSans' && f.status === 'loaded');
+  });
+  check(ok, '인터넷이 끊겨도 앱이 열림 (처음 화면·춘식이·글꼴)');
+  await p.keyboard.press('Enter'); await p.keyboard.press('Enter');
+  check(await p.locator('#playScreen').isVisible(), '인터넷 없이 연습 시작');
+  await ctx.setOffline(false);
+  await ctx.close();
+}
+
 check(errors.length === 0, `콘솔 오류 없음 ${errors.join(' / ')}`);
 await browser.close();

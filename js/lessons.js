@@ -14,8 +14,8 @@
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js?v=202610030913';
-import { makeSentences } from './sentence-maker.js?v=202610030913';
+import { toKeys } from './hangul.js?v=202610030921';
+import { makeSentences } from './sentence-maker.js?v=202610030921';
 
 // 낱말 → 그림 (그림이 없으면 빈칸). 주제별로 모아 적고, 판에서는 섞어서 낸다 (덜 본 낱말 먼저: app.js freshOrder)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말. ㅘ(ㅗ+ㅏ)·ㅚ(ㅗ+ㅣ)도 이 키로 칠 수 있다. 이 자리로 되는 낱말은 원래 많지 않다

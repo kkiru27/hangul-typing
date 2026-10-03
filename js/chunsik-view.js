@@ -2,14 +2,15 @@
 // 흰 배경은 tools/cutout.py로 가장자리에서만 지웠다 (코·베개·눈 반짝임·눈물은 보존).
 
 export const POSES = {
-  stand: 'img/chunsik.png?v=202610030913',
-  goguma: 'img/chunsik-goguma.png?v=202610030913',
-  sad: 'img/chunsik-sad.png?v=202610030913',
+  stand: 'img/chunsik.webp?v=202610030921',
+  goguma: 'img/chunsik-goguma.webp?v=202610030921',
+  sad: 'img/chunsik-sad.webp?v=202610030921',
 };
 
 // 고구마 그림은 icons.js에 (예전 import 자리 그대로 쓸 수 있게 다시 내보냄)
-export { GOGUMA_SVG } from './icons.js?v=202610030913';
-import { FX } from './icons.js?v=202610030913';
+export { GOGUMA_SVG } from './icons.js?v=202610030921';
+import { FX } from './icons.js?v=202610030921';
+import { replay, MOVES } from './motion.js?v=202610030921';
 
 export class Chunsik {
   constructor(el, { size = 'm', pose = 'stand' } = {}) {
@@ -49,17 +50,16 @@ export class Chunsik {
     } else {
       b.textContent = text;
     }
-    restart(b, 'pop');
+    replay(b, 'pop', MOVES.pop);
   }
 
   // 한 번 하는 몸짓: 'hop'(맞음) | 'oops'(틀림) | 'cheer'(끝)
   act(kind) {
-    this.img.classList.remove('hop', 'oops', 'cheer');
-    restart(this.img, kind);
+    replay(this.img, 'act', MOVES[kind]);
     const fx = FX[kind];
     if (fx) {
       this.fx.innerHTML = fx;
-      restart(this.fx, 'show');
+      replay(this.fx, 'fx', MOVES.fx);
     }
   }
 
@@ -67,10 +67,4 @@ export class Chunsik {
   mood(kind) {
     this.el.classList.toggle('party', kind === 'party');
   }
-}
-
-function restart(el, cls) {
-  el.classList.remove(cls);
-  void el.offsetWidth; // 애니메이션 처음부터 다시
-  el.classList.add(cls);
 }

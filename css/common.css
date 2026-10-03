@@ -3,7 +3,7 @@
 /* 글꼴: Pretendard를 이 앱에 쓰는 글자만 남긴 것 (tools/font-subset.py, 라이선스 fonts/OFL.txt) */
 @font-face {
   font-family: "AppSans";
-  src: url("../fonts/app-sans.woff2?v=202610030913") format("woff2");
+  src: url("../fonts/app-sans.woff2?v=202610030921") format("woff2");
   font-weight: 400 800;
   font-display: swap;
 }

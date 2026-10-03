@@ -285,12 +285,6 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   transform: translateY(-4px);
 }
 .tile.current.error { background: var(--bad-soft); color: var(--bad); box-shadow: inset 0 0 0 2.5px var(--bad), 0 12px 22px -10px var(--bad); }
-.tile.shake { animation: shake .35s; }
-@keyframes shake {
-  25% { transform: translate(-5px, -4px); }
-  50% { transform: translate(5px, -4px); }
-  75% { transform: translate(-3px, -4px); }
-}
 
 /* 짧은 글 */
 .sentence { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 1060px; }
@@ -307,11 +301,17 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .sent-enter {
   margin-left: 10px; padding: 4px 12px; border-radius: 12px;
   font-size: 18px; vertical-align: middle;
+  position: relative;
   background: var(--pinky-soft); color: var(--pinky-deep);
   box-shadow: inset 0 0 0 2px var(--pinky);
-  animation: glow-pinky 1.6s var(--ease) infinite;
 }
-@keyframes glow-pinky { 50% { box-shadow: inset 0 0 0 2px var(--pinky), 0 0 0 6px rgba(236, 106, 156, .16); } }
+/* 둘레가 숨 쉬듯 빛남: 따로 그린 테두리의 투명도만 바꾼다 (그림자를 매 장면 다시 그리지 않게) */
+.sent-enter::after, .wb-space.next::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 16px;
+  box-shadow: 0 0 0 4px rgba(236, 106, 156, .22);
+  animation: breathe 1.6s var(--ease) infinite;
+  pointer-events: none;
+}
 .sent-next { font-size: 18px; color: var(--faint); }
 .story { display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 1060px; }
 .story[hidden] { display: none; }
@@ -340,12 +340,13 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .wb-chars .typing { color: var(--accent); text-decoration: underline 4px; text-underline-offset: 8px; text-decoration-color: var(--accent-hi); }
 .wb-chars .error { color: var(--bad); background: var(--bad-soft); border-radius: 10px; }
 .wb-space {
+  position: relative;
   font-size: 18px; font-weight: 800; padding: 7px 14px; border-radius: 14px;
   box-shadow: inset 0 0 0 2px var(--line); color: var(--faint);
 }
-.wb-space.next { background: var(--thumb-soft); color: var(--thumb-deep); box-shadow: inset 0 0 0 2px var(--thumb); animation: ring-soft 1.6s var(--ease) infinite; }
+.wb-space.next { background: var(--thumb-soft); color: var(--thumb-deep); box-shadow: inset 0 0 0 2px var(--thumb); }
+.wb-space.next::after { border-radius: 19px; box-shadow: 0 0 0 4px rgba(154, 106, 214, .22); }
 .wb-space.done { color: var(--ok); background: var(--ok-soft); box-shadow: none; }
-@keyframes ring-soft { 50% { box-shadow: inset 0 0 0 2px var(--thumb), 0 0 0 6px rgba(154, 106, 214, .16); } }
 
 /* 안내: 춘식이 · 칠 키(손가락 색 키처럼) · 손가락 이름 */
 .guide { display: flex; align-items: center; gap: 28px; }
@@ -463,8 +464,6 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   .dig-sprout .goguma { width: 52px; }
   .dig-key { font-size: 28px; min-width: 44px; }
 }
-.typed-bar.shake { animation: shake-x .35s; }
-@keyframes shake-x { 25% { translate: -5px 0; } 50% { translate: 5px 0; } 75% { translate: -3px 0; } }
 
 /* 결과: 숫자 → 고구마 → 안내 → 단추가 하나씩 나타난다 (app.js revealResult) */
 .result-card {

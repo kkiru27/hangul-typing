@@ -2,27 +2,28 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js?v=202610030913';
-import { InputBridge } from './input-bridge.js?v=202610030913';
-import { KeyboardView } from './keyboard-view.js?v=202610030913';
-import { HandsView } from './hands-view.js?v=202610030913';
-import { STAGES, GAMES, gameLevel, levelKeys, levelWords, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js?v=202610030913';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610030913';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610030913';
-import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610030913';
-import { VERSION } from './version.js?v=202610030913';
-import { Chunsik } from './chunsik-view.js?v=202610030913';
-import { icon, ART, DEFS, GOGUMA_SVG } from './icons.js?v=202610030913';
-import { checkForUpdate } from './update-check.js?v=202610030913';
-import { RainGame } from './game-rain.js?v=202610030913';
-import { DigGame } from './game-dig.js?v=202610030913';
-import { RaceGame } from './game-race.js?v=202610030913';
-import { Sound } from './sound.js?v=202610030913';
-import { loadSettings, saveSettings } from './settings.js?v=202610030913';
+import { Judge } from './judge.js?v=202610030921';
+import { InputBridge } from './input-bridge.js?v=202610030921';
+import { KeyboardView } from './keyboard-view.js?v=202610030921';
+import { HandsView } from './hands-view.js?v=202610030921';
+import { STAGES, GAMES, gameLevel, levelKeys, levelWords, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js?v=202610030921';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610030921';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610030921';
+import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610030921';
+import { VERSION } from './version.js?v=202610030921';
+import { Chunsik } from './chunsik-view.js?v=202610030921';
+import { icon, ART, DEFS, GOGUMA_SVG } from './icons.js?v=202610030921';
+import { checkForUpdate } from './update-check.js?v=202610030921';
+import { setupOffline } from './offline.js?v=202610030921';
+import { RainGame } from './game-rain.js?v=202610030921';
+import { DigGame } from './game-dig.js?v=202610030921';
+import { RaceGame } from './game-race.js?v=202610030921';
+import { Sound } from './sound.js?v=202610030921';
+import { loadSettings, saveSettings } from './settings.js?v=202610030921';
+import { play, replay, MOVES } from './motion.js?v=202610030921';
 
 const $ = (id) => document.getElementById(id);
 document.body.insertAdjacentHTML('afterbegin', DEFS); // 아이콘 그라데이션 (한 번만)
-const REDUCED_MOTION = () => matchMedia('(prefers-reduced-motion: reduce)').matches; // 기기의 '동작 줄이기'
 
 const settings = loadSettings();
 const sound = new Sound(settings.sound);
@@ -346,28 +347,12 @@ function renderLevels() {
 function lockedShake(i) {
   sound.play('warn');
   renderHome();
-  const card = $('stageMap').querySelector(`[data-idx="${i}"]`);
-  if (card?.animate && !REDUCED_MOTION()) {
-    card.animate([{ translate: '0 0' }, { translate: '-6px 0' }, { translate: '6px 0' }, { translate: '-3px 0' }, { translate: '0 0' }],
-      { duration: 360, easing: 'ease-in-out' });
-  }
+  replay($('stageMap').querySelector(`[data-idx="${i}"]`), 'shake', MOVES.shake);
 }
 
 // 화면이 바뀔 때: 살짝 아래에서 떠오르며 나타난다
 function enter(el) {
-  play(el, [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
-    { duration: 320, easing: 'cubic-bezier(.22,.8,.24,1)' });
-}
-
-// 움직임 한 번 (Web Animations: 화면 배치를 다시 계산하지 않는다). 동작 줄이기면 건너뜀
-function play(el, keyframes, opts) {
-  if (!el?.animate || REDUCED_MOTION()) return null;
-  try { return el.animate(keyframes, opts); } catch { return null; }
-}
-
-// 톡 튀기 (콤보 등)
-function pop(el) {
-  play(el, [{ transform: 'scale(.82)' }, { transform: 'scale(1.08)', offset: .6 }, { transform: 'none' }], { duration: 320, easing: 'ease-out' });
+  replay(el, 'enter', MOVES.enter);
 }
 
 // 처음 화면: ← → 는 같은 줄 안에서, ↓ 카드 → 설정 줄, ↑ 설정 줄 → 카드
@@ -474,7 +459,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610030913';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.webp?v=202610030921';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -541,7 +526,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610030913';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.webp?v=202610030921';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -773,7 +758,7 @@ function startGame(gi, n) {
   $('roundLabel').textContent = title;
   $('stageLabel').textContent = title;
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610030913';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.webp?v=202610030921';
   $('gameScreen').dataset.kind = game.type;
   $('gameCombo').hidden = true;
   show('game');
@@ -804,7 +789,7 @@ function comboUp() {
   const c = $('gameCombo');
   c.hidden = state.combo < 2;
   c.innerHTML = `${icon('flame')}<span>${state.combo} 콤보!</span>`;
-  pop(c);
+  replay(c, 'pop', MOVES.pop);
   if (state.combo >= 3 && state.combo % 3 === 0) gameCs.say(`춘춘춘!! (${state.combo} 콤보! 대단해!)`, 'good');
 }
 
@@ -910,9 +895,7 @@ function submitGameWord() {
 }
 
 function shake(el) {
-  el.classList.remove('shake');
-  void el.offsetWidth;
-  el.classList.add('shake');
+  replay(el, 'shake', MOVES.shake);
 }
 
 function renderRain() {
@@ -942,7 +925,7 @@ function renderRain() {
 
   $('progress').textContent = `${game.caught}/${game.total}`;
   $('accuracy').textContent = pct(game.resolved ? game.caught / game.resolved : null);
-  $('track').style.setProperty('--p', game.resolved / game.total);
+  setTrack(game.resolved / game.total);
 }
 
 // ───── 게임: 고구마 캐기 (쏙 나온 고구마의 글자 키를 하나씩) ─────
@@ -1011,7 +994,7 @@ function renderDig() {
   hands.setTargets(codes);
   $('progress').textContent = `${game.hits}/${game.total}`;
   $('accuracy').textContent = pct(game.resolved ? game.hits / game.resolved : null);
-  $('track').style.setProperty('--p', game.resolved / game.total);
+  setTrack(game.resolved / game.total);
 }
 
 // ───── 게임: 춘식이 달리기 (낱말 + 스페이스바, 동물 친구와 경주) ─────
@@ -1075,7 +1058,7 @@ function finishRace(win) {
     game.finish();
     game.setMe(1);
     $('progress').textContent = `${race.idx}/${race.items.length}`;
-    $('track').style.setProperty('--p', 1);
+    setTrack(1);
   } else {
     race.correct += race.judge.correct;
     race.mistakes += race.judge.mistakes;
@@ -1125,7 +1108,7 @@ function renderRace() {
   const m = race.mistakes + judge.mistakes;
   $('progress').textContent = `${race.idx}/${race.items.length}`;
   $('accuracy').textContent = pct(c + m ? c / (c + m) : null);
-  $('track').style.setProperty('--p', me);
+  setTrack(me);
 }
 
 // 게임 종류별: 시작 · 입력 · 그리기
@@ -1312,29 +1295,27 @@ function render() {
   else if (isLines) renderSentence();
   // 글자 타일 (자리 연습)
   const tiles = isWords || isLines ? [] : $('tiles').querySelectorAll('.tile');
-  if (!isWords && !isLines) judge.units.forEach((u, i) => {
-    const t = tiles[i];
-    const cur = i === currentUnit(judge);
-    t.className = 'tile';
-    if (u.end <= judge.okLen) t.classList.add('done');
-    if (cur) {
-      t.classList.add('current', `tone-${fingerTone(FINGER_BY_CODE[keyFor(judge.nextKey)?.code])}`);
-      if (judge.hasError) t.classList.add('error');
-    }
-  });
+  if (!isWords && !isLines) {
+    const curIdx = currentUnit(judge);
+    judge.units.forEach((u, i) => {
+      let cls = u.end <= judge.okLen ? 'tile done' : 'tile';
+      if (i === curIdx) cls += ` current tone-${fingerTone(FINGER_BY_CODE[keyFor(judge.nextKey)?.code])}${judge.hasError ? ' error' : ''}`;
+      setClass(tiles[i], cls);
+    });
+  }
 
   renderTyped();
   const n = state.items.length;
   const part = judge.okLen / judge.target.length; // 지금 글을 친 비율
-  $('progress').textContent = isWords || isLines ? `${state.itemIdx + (judge.done ? 1 : 0)}/${n}` : `${judge.okLen}/${judge.target.length}`;
-  $('track').style.setProperty('--p', (state.itemIdx + part) / n);
+  setText($('progress'), isWords || isLines ? `${state.itemIdx + (judge.done ? 1 : 0)}/${n}` : `${judge.okLen}/${judge.target.length}`);
+  setTrack((state.itemIdx + part) / n);
   if (state.stage.type === 'test') renderTestClock();
   const c = state.roundAcc.correct + judge.correct;
   const m = state.roundAcc.mistakes + judge.mistakes;
-  $('accuracy').textContent = pct(c + m ? c / (c + m) : null);
+  setText($('accuracy'), pct(c + m ? c / (c + m) : null));
   if (hasSpeed()) {
     const cpm = cpmOf(c, state.roundAcc.ms + judge.elapsed());
-    $('speed').textContent = cpm ? `${cpm}타` : '–';
+    setText($('speed'), cpm ? `${cpm}타` : '–');
   }
 
   // 다음에 칠 키 / 손가락 안내
@@ -1368,25 +1349,38 @@ function render() {
   hands.setTargets(guide.finger ? codes : []);
 
   const tone = `tone-${fingerTone(guide.finger)}`;
-  $('guideCard').className = `guide-card ${tone}${guide.big.length > 1 ? ' wide-text' : ''}`;
-  $('guideFinger').className = `guide-finger ${tone}`;
-  $('guideJamo').textContent = guide.big;
-  $('guideKey').textContent = guide.small;
-  $('guideFinger').textContent = guide.fingerText || FINGER_NAMES[guide.finger] || '';
+  setClass($('guideCard'), `guide-card ${tone}${guide.big.length > 1 ? ' wide-text' : ''}`);
+  setClass($('guideFinger'), `guide-finger ${tone}`);
+  setText($('guideJamo'), guide.big);
+  setText($('guideKey'), guide.small);
+  setText($('guideFinger'), guide.fingerText || FINGER_NAMES[guide.finger] || '');
+}
+
+// 값이 바뀔 때만 DOM을 고친다 (같은 값을 다시 넣어도 브라우저는 스타일·배치를 다시 계산할 수 있다)
+function setText(el, text) {
+  if (el.textContent !== text) el.textContent = text;
+}
+function setClass(el, cls) {
+  if (el.className !== cls) el.className = cls;
+}
+// 위쪽 고구마 길 (0~1)
+function setTrack(p) {
+  const v = String(Math.round(p * 1000) / 1000);
+  if ($('track')._p !== v) $('track').style.setProperty('--p', ($('track')._p = v));
 }
 
 // 낱말 연습 화면: 이번 판 낱말 줄 + 지금 낱말(글자마다 색, 다 치면 스페이스 표시)
 function renderWords() {
   const { judge, items, itemIdx } = state;
-  $('wordQueue').innerHTML = items.map((w, i) =>
-    `<span class="wq ${i < itemIdx ? 'done' : i === itemIdx ? 'current' : ''}">${escapeHtml(w.trim())}</span>`).join('');
+  setHtml($('wordQueue'), items.map((w, i) =>
+    `<span class="wq ${i < itemIdx ? 'done' : i === itemIdx ? 'current' : ''}">${escapeHtml(w.trim())}</span>`).join(''));
   const word = items[itemIdx].trim();
   const states = judge.unitStates();
   const chars = judge.units.slice(0, -1).map((u, i) => `<span class="${states[i]}">${escapeHtml(u.ch)}</span>`).join('');
   const spaceState = states[states.length - 1];
   const spaceCls = spaceState === 'done' ? 'done' : judge.nextKey === ' ' && !judge.hasError ? 'next' : '';
-  $('wordBig').innerHTML = `<span class="wb-emoji">${state.stage.words[word] || ''}</span>
-    <span class="wb-chars">${chars}</span><span class="wb-space ${spaceCls}">스페이스 ⎵</span>`;
+  setHtml($('wordBig'), `<span class="wb-emoji">${state.stage.words[word] || ''}</span>
+    <span class="wb-chars">${chars}</span><span class="wb-space ${spaceCls}">스페이스 ⎵</span>`);
 }
 
 // 문장 한 줄: 글자마다 색, 띄어쓰기 자리 표시, 다 쳤으면 Enter 표시
@@ -1406,7 +1400,7 @@ function lineHtml() {
 // 짧은 글·검정 화면: 지금 문장 + 다음 문장
 function renderSentence() {
   const { items, itemIdx } = state;
-  $('sentBig').innerHTML = lineHtml();
+  setHtml($('sentBig'), lineHtml());
   const next = items[itemIdx + 1];
   $('sentNext').textContent = next ? `다음: ${next}` : '마지막 문장이에요';
 }
@@ -1418,7 +1412,7 @@ function renderStory() {
   const { lines } = state.story;
   if (at > 0) $('storyPrev').textContent = lines[at - 1];
   else $('storyPrev').innerHTML = `${icon('book')}<span>${escapeHtml(state.story.title)}</span>`;
-  $('storyCur').innerHTML = lineHtml();
+  setHtml($('storyCur'), lineHtml());
   $('storyNext').innerHTML = lines.slice(at + 1, at + 3).map(escapeHtml).join('<br>') || '이야기의 마지막 줄이에요';
 }
 
@@ -1450,7 +1444,7 @@ function renderTestClock() {
   const left = state.testStart ? Math.max(0, state.stage.duration - (Date.now() - state.testStart)) : state.stage.duration;
   const sec = Math.ceil(left / 1000);
   $('progress').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-  $('track').style.setProperty('--p', 1 - left / state.stage.duration);
+  setTrack(1 - left / state.stage.duration);
   const c = state.roundAcc.correct + state.judge.correct;
   const cpm = state.testStart ? cpmOf(c, Math.min(state.stage.duration, Date.now() - state.testStart)) : null;
   $('speed').textContent = cpm ? `${cpm}타` : '–';
@@ -1490,7 +1484,7 @@ function renderTyped() {
     return `<span class="${cls.join(' ')}">${u.ch === ' ' ? '&nbsp;' : escapeHtml(u.ch)}</span>`;
   });
   const shown = html.length > TYPED_MAX ? ['<span class="more">…</span>', ...html.slice(-TYPED_MAX + 1)] : html;
-  $('typedText').innerHTML = shown.join('');
+  setHtml($('typedText'), shown.join(''));
   $('typedHint').hidden = units.length > 0;
   $('typedBar').classList.toggle('has-error', judge.hasError);
 }
@@ -1530,10 +1524,7 @@ function withRo(word) {
 }
 
 function hopRunner() {
-  const r = $('trackRunner');
-  r.classList.remove('hop');
-  void r.offsetWidth;
-  r.classList.add('hop');
+  replay($('trackRunner').querySelector('img'), 'hop', MOVES.hop);
 }
 
 function currentUnit(judge) {
@@ -1542,11 +1533,7 @@ function currentUnit(judge) {
 
 function shakeCurrentTile() {
   const t = $('tiles').querySelectorAll('.tile')[currentUnit(state.judge)];
-  if (!t) return;
-  t.classList.remove('shake');
-  void t.offsetWidth;
-  t.classList.add('shake');
-  setTimeout(() => t.classList.remove('shake'), 400);
+  replay(t, 'shake', MOVES.shake);
 }
 
 function pct(acc) {
@@ -1571,3 +1558,6 @@ $('version').title = VERSION;
 state.sel = suggestStage(STAGES, state.records);
 goHome('menu');
 checkForUpdate();
+// 오프라인 준비는 앱이 다 뜬 뒤에 (처음 화면을 늦추지 않게)
+if (document.readyState === 'complete') setupOffline();
+else addEventListener('load', () => setupOffline(), { once: true });
