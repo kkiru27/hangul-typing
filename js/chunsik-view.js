@@ -2,21 +2,13 @@
 // 흰 배경은 tools/cutout.py로 가장자리에서만 지웠다 (코·베개·눈 반짝임·눈물은 보존).
 
 export const POSES = {
-  stand: 'img/chunsik.png?v=202610021304',
-  goguma: 'img/chunsik-goguma.png?v=202610021304',
-  sad: 'img/chunsik-sad.png?v=202610021304',
+  stand: 'img/chunsik.png?v=202610030859',
+  goguma: 'img/chunsik-goguma.png?v=202610030859',
+  sad: 'img/chunsik-sad.png?v=202610030859',
 };
 
-// 고구마 (직접 그린 그림)
-export const GOGUMA_SVG = `
-<svg viewBox="0 0 64 44" class="goguma" aria-label="고구마">
-  <path d="M14 30 C8 22 16 10 32 9 C47 8 58 16 56 25 C54 34 42 38 29 37 C22 36 17 34 14 30 Z"
-        fill="#b8477a" stroke="#6e2346" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M22 17 q3 -2 6 -1 M36 28 q3 1 5 -1 M42 16 q2 1 3 3" stroke="#e58bb0" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-  <path d="M56 24 q6 -1 7 -5" stroke="#6e2346" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <path d="M14 29 C8 28 4 22 6 16 C10 19 13 22 14 29 Z" fill="#5fb345" stroke="#2f6b22" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M15 28 C12 21 13 14 18 10 C19 16 18 22 15 28 Z" fill="#7bc95e" stroke="#2f6b22" stroke-width="2" stroke-linejoin="round"/>
-</svg>`;
+// 고구마 그림은 icons.js에 (예전 import 자리 그대로 쓸 수 있게 다시 내보냄)
+export { GOGUMA_SVG } from './icons.js?v=202610030859';
 
 export class Chunsik {
   constructor(el, { size = 'm', pose = 'stand' } = {}) {

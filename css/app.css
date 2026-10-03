@@ -17,33 +17,54 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   grid-template-columns: auto minmax(0, 1fr) auto; /* 가운데(판 이름·고구마 길)가 줄어들고 양쪽은 줄바꿈 없이 */
   gap: 16px;
   align-items: center;
-  padding: 10px 20px;
+  padding: 10px 24px;
 }
-.brand { font-weight: 800; font-size: 18px; color: var(--accent); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: -.02em; color: var(--ink); }
+.brand-logo .art { display: block; width: 36px; height: 36px; }
 .brand[hidden], .nav-btn[hidden] { display: none; }
 /* 위쪽 막대 왼쪽 단추: 처음으로 / 멈춤 (톡 눌러도 되고 Esc로도 된다) */
 .nav-btn {
   display: flex; align-items: center; gap: 8px;
-  padding: 5px 8px 5px 14px;
-  border: 2px solid var(--line); border-radius: 999px;
+  height: 40px;
+  padding: 0 8px 0 14px;
+  border: 0; border-radius: 999px;
   background: var(--card); color: var(--ink);
-  font-size: 16px; font-weight: 800; white-space: nowrap;
+  box-shadow: var(--sh-1);
+  font-size: 15px; font-weight: 700; white-space: nowrap;
   cursor: pointer;
+  transition: transform var(--t-fast) var(--ease);
 }
-.nav-btn kbd { font-size: 12px; padding: 1px 6px; color: var(--muted); }
+.nav-btn:active { transform: scale(.96); }
+.nav-btn .ic { width: 18px; height: 18px; stroke-width: 2.2; }
+.nav-btn kbd { font-size: 11px; padding: 1px 6px; color: var(--muted); }
 .top-center { display: flex; justify-content: center; min-width: 0; }
-.stage-label { font-weight: 700; font-size: 18px; }
+.stage-label { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+.stage-label .ic { width: 22px; height: 22px; color: var(--accent); }
 .stage-label[hidden] { display: none; }
 .stats { display: flex; gap: 8px; justify-content: flex-end; }
+.stats[data-mode="home"] .stat { display: none; }
 .stat {
   display: flex; align-items: baseline; gap: 6px;
-  background: var(--card); border: 1.5px solid var(--line); border-radius: 999px;
-  padding: 5px 12px;
+  height: 40px; align-items: center;
+  background: var(--card); border-radius: 999px;
+  box-shadow: var(--sh-1);
+  padding: 0 14px;
   white-space: nowrap;
 }
 .stat span { font-size: 13px; color: var(--muted); font-weight: 600; }
-.stat b { font-size: 20px; min-width: 2.8em; text-align: right; font-variant-numeric: tabular-nums; }
+.stat b { font-size: 19px; font-weight: 800; min-width: 2.8em; text-align: right; font-variant-numeric: tabular-nums; }
 .stat[hidden] { display: none; }
+/* 처음 화면 오른쪽 위: 모은 고구마 */
+.goguma-chip {
+  display: flex; align-items: center; gap: 6px;
+  height: 42px; padding: 0 16px 0 8px;
+  border-radius: 999px; background: var(--card); box-shadow: var(--sh-1);
+  white-space: nowrap;
+}
+.goguma-chip[hidden] { display: none; }
+.goguma-chip .goguma { width: 34px; }
+.goguma-chip b { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.goguma-chip span { font-size: 13px; font-weight: 500; color: var(--muted); }
 
 /* 가운데 영역 */
 .stage-area {
@@ -74,68 +95,123 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 .banner-icon { font-size: 26px; }
 @keyframes drop { from { transform: translateY(-10px); opacity: 0; } }
 
-/* 처음 화면 */
-/* 단계 지도 */
-.map-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.map-total { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 800; color: var(--muted); }
-.map-total .goguma { width: 30px; }
-.stage-map { display: grid; grid-template-columns: repeat(var(--cols, 3), 184px); gap: 10px; }
+/* 처음 화면: 왼쪽 춘식이 카드 + 오른쪽 카드들, 아래에 설정·안내 줄 */
+.screen.home { justify-content: center; gap: 14px; padding: 2px 24px 12px; }
+.home-row { display: flex; align-items: stretch; gap: 16px; width: min(1100px, 100%); flex: 0 1 380px; min-height: 0; }
+.map-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.stage-map { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 14px; align-content: start; }
+#homeScreen[data-page="menu"] .stage-map { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: stretch; }
+#homeScreen[data-page="menu"] .map-tip, #homeScreen[data-page="menu"] .map-pages { display: none; }
+
+/* 카드 (갈래·단계·게임·레벨 공통): 흰 카드, 고르면 보라 테두리와 함께 살짝 떠오른다 */
 .stage-card {
   position: relative;
-  display: flex; flex-direction: column; gap: 1px;
-  padding: 8px 12px 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+  padding: 14px 16px;
   background: var(--card);
-  border: 2.5px solid var(--line);
-  border-radius: 18px;
+  border: 2px solid transparent;
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
   cursor: pointer;
-  transition: transform .12s, box-shadow .12s, border-color .12s;
+  transition: transform var(--t) var(--spring), box-shadow var(--t) var(--ease), border-color var(--t) var(--ease);
 }
-.stage-card.locked { background: #f4efe8; color: #b3a59b; }
-.stage-card.locked .sc-num, .stage-card.locked .gc-meta { color: #b3a59b; }
-.stage-card.shake { animation: shake-x .35s; }
-.sc-lock { position: absolute; right: 10px; top: 8px; font-size: 18px; }
-.gc-meta { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
-.gc-meta .goguma { width: 22px; }
-.stage-card.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 122, 89, .22); transform: translateY(-3px); }
-@keyframes shake-x { 25% { translate: -5px 0; } 50% { translate: 5px 0; } 75% { translate: -3px 0; } }
+.stage-card:active { transform: scale(.98); }
+.stage-card.selected { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 0 0 4px var(--accent-ring), 0 14px 30px -6px var(--accent-glow); }
+.stage-card.locked { background: var(--card-2); box-shadow: none; }
+.stage-card.locked .sc-name, .stage-card.locked .sc-num, .stage-card.locked .gc-meta { color: var(--faint); }
+.sc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
 .sc-num { font-size: 13px; font-weight: 800; color: var(--accent); }
-.sc-name { font-size: 19px; font-weight: 800; }
-.sc-keys { font-size: 15px; color: var(--muted); letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sc-goguma { display: flex; gap: 4px; margin-top: 3px; }
+.sc-name { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.sc-keys { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-goguma { display: flex; gap: 4px; margin-top: 6px; }
 .sc-goguma .goguma { width: 28px; }
-.goguma.off { filter: grayscale(1); opacity: .28; }
-/* 처음 화면 갈래 고르기: 큰 카드 두 장 */
-.stage-card.menu-card { width: 280px; min-height: 176px; padding: 12px 18px; gap: 4px; align-items: flex-start; }
-.mc-icon { font-size: 40px; line-height: 1.1; }
-.menu-card .sc-name { font-size: 24px; }
-.menu-card .sc-keys { font-size: 15px; letter-spacing: 0; }
-.mc-meta { display: flex; align-items: center; gap: 4px; margin-top: auto; font-size: 14px; font-weight: 700; color: var(--muted); white-space: nowrap; }
-.mc-meta .goguma { width: 24px; }
-#homeScreen[data-page="menu"] .stage-map { grid-template-columns: repeat(2, 280px); gap: 16px; }
-#homeScreen[data-page="games"] .stage-map { grid-template-columns: repeat(var(--cols, 3), 240px); }
-/* 처음 화면 설정 줄 (소리·키보드) */
-.home-settings { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 2px; }
-.home-settings[hidden] { display: none; }
-.set-chip {
-  padding: 5px 14px;
-  border: 2px solid var(--line); border-radius: 999px;
-  background: var(--card); color: var(--muted);
-  font-size: 15px; font-weight: 800; white-space: nowrap;
-  cursor: pointer;
+.goguma.off { filter: grayscale(1); opacity: .25; }
+.sc-lock { display: flex; color: var(--faint); }
+.sc-lock .ic { width: 17px; height: 17px; }
+.sc-group { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--index-soft); color: var(--index-ink); }
+.sc-group.words { background: var(--ok-soft); color: #17734a; }
+.sc-group.game { background: var(--thumb-soft); color: var(--thumb-ink); }
+.gc-meta { display: flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.gc-meta .goguma { width: 22px; }
+/* 게임 작은 그림 칸 (손가락 색 바탕) */
+.g-icon { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 10px; display: grid; place-items: center; background: var(--c-soft, #e9ebf0); color: var(--c-deep, var(--muted)); }
+.g-icon .ic { width: 17px; height: 17px; stroke-width: 2.2; }
+.g-icon .goguma { width: 22px; }
+
+/* 갈래 카드 두 장 (타자 연습 / 게임) */
+.stage-card.menu-card { padding: 20px 22px; gap: 12px; }
+.menu-card .art { display: block; width: 60px; height: 60px; }
+.mc-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.mc-chip { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--card-2); font-size: 13px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mc-chip .goguma { width: 24px; }
+.mc-text { display: flex; flex-direction: column; gap: 4px; }
+.menu-card .sc-name { font-size: 26px; }
+.menu-card .sc-keys { font-size: 15px; white-space: normal; }
+.mc-fill { flex: 1; }
+.mc-progress { display: flex; flex-direction: column; gap: 8px; }
+.mc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mc-row b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-row small { font-size: 13px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.bar { display: block; height: 8px; border-radius: 8px; background: #eef0f4; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--accent-hi), var(--accent)); transition: width var(--t-slow) var(--ease); }
+.mc-games { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mg { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px; border-radius: 14px; background: var(--card-2); }
+.mg b { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mg small { margin-top: -4px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.mg.locked b { color: var(--muted); }
+/* 카드 아래 큰 단추: 고른 카드만 보라로 채워진다 */
+.mc-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  height: 50px; flex: 0 0 auto;
+  border-radius: 16px;
+  background: #eff0f4; color: var(--ink-2);
+  font-size: 17px; font-weight: 700;
+  transition: background var(--t) var(--ease), color var(--t) var(--ease), box-shadow var(--t) var(--ease);
 }
-.set-chip.on { color: var(--ink); border-color: #f3c1ae; background: #fff1ea; }
-.set-chip.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 122, 89, .22); }
-.map-pages { display: flex; gap: 8px; min-height: 10px; }
-.map-pages span { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
-.map-pages span.on { background: var(--accent); }
-.sc-group { position: absolute; right: 10px; bottom: 8px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #eef6ff; color: var(--index); }
-.sc-group.words { background: #e9f7ef; color: var(--ok); }
-.sc-group.game { background: var(--thumb-soft); color: var(--thumb); }
-.map-tip { margin: 2px 0 0; min-height: 20px; max-width: 580px; text-align: center; font-size: 15px; color: var(--muted); }
+.mc-cta kbd { font-size: 11px; min-width: 0; padding: 1px 7px; color: var(--muted); }
+.menu-card.selected .mc-cta {
+  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 2px 0 var(--accent-deep), 0 10px 20px -8px var(--accent);
+}
+.menu-card.selected .mc-cta kbd { background: rgba(255, 255, 255, .22); box-shadow: none; color: #fff; }
+
+/* 아래 줄: 설정(키보드 모양 · 소리) + 키 안내 */
+.home-bottom { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: min(1100px, 100%); flex: 0 0 auto; min-height: 44px; }
+.home-settings { display: flex; align-items: center; gap: 12px; }
+.home-settings[hidden] { display: none; }
+.home-settings[hidden] + .home-hint { margin: 0 auto; }
+.seg { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 14px; background: #e6e8ed; }
+.seg-label { padding: 0 6px 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.set-chip {
+  appearance: none; border: 0; margin: 0; cursor: pointer;
+  font: inherit; color: var(--ink-2); white-space: nowrap;
+  transition: background var(--t) var(--ease), box-shadow var(--t) var(--ease), color var(--t) var(--ease);
+}
+.seg-btn { display: flex; align-items: baseline; gap: 5px; height: 36px; padding: 0 13px; border-radius: 11px; background: transparent; font-size: 14px; color: var(--muted); line-height: 36px; }
+.seg-btn b { font-weight: 700; }
+.seg-btn small { font-size: 11px; font-weight: 600; opacity: .8; }
+.seg-btn.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(20, 24, 40, .12); }
+.sound-btn { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 10px 0 14px; border-radius: 14px; background: var(--card); box-shadow: var(--sh-1); font-size: 14px; font-weight: 700; }
+.sound-btn .ic { width: 18px; height: 18px; }
+.switch { position: relative; width: 44px; height: 26px; border-radius: 999px; background: #d5d9e0; }
+.switch::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); }
+.sound-btn.on .switch { background: var(--accent); }
+.sound-btn.on .switch::after { transform: translateX(18px); }
+/* 키보드로 고른 칸 */
+.set-chip.selected { box-shadow: 0 0 0 3px var(--accent); }
+.seg-btn.on.selected { box-shadow: 0 0 0 3px var(--accent), 0 1px 3px rgba(20, 24, 40, .12); }
+.home-hint { display: flex; align-items: center; gap: 5px; margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.home-hint kbd { font-size: 12px; min-width: 26px; height: 26px; }
+.home-hint .sep { width: 3px; height: 3px; margin: 0 7px; border-radius: 50%; background: var(--faint); }
+
+.map-pages { display: flex; justify-content: center; gap: 6px; min-height: 8px; }
+.map-pages span { width: 8px; height: 8px; border-radius: 4px; background: #d5d9e0; transition: width var(--t) var(--ease), background var(--t) var(--ease); }
+.map-pages span.on { width: 22px; background: var(--accent); }
+.map-tip { margin: 0; min-height: 20px; text-align: center; font-size: 14px; color: var(--muted); }
 .press-enter { margin: 14px 0 0; font-size: 22px; font-weight: 700; }
-.press-enter kbd { font-size: 20px; border-color: var(--index); color: var(--index); }
-.corner { position: absolute; right: 18px; bottom: 2px; font-size: 12px; color: #c3b6ab; }
-.corner a { color: var(--muted); }
+.press-enter kbd { font-size: 20px; }
 
 /* 일시정지 창: 가운데 영역만 덮는다 (아래 키보드는 보이게) */
 .pause-layer {
@@ -377,6 +453,39 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 @keyframes goguma-pop { 0% { transform: scale(0) rotate(-30deg); } 70% { transform: scale(1.25) rotate(8deg); } 100% { transform: none; } }
 .result-note { margin-top: 4px; font-size: 18px; font-weight: 800; color: var(--ok); }
 
+/* 처음 화면: 세로가 좁으면 카드 속을 줄인다 (아이패드 사파리는 주소창 때문에 740~760쯤) */
+@media (max-height: 810px) {
+  .screen.home { gap: 12px; padding-bottom: 10px; }
+  .stage-card { padding: 11px 14px; }
+  .sc-goguma { margin-top: 4px; }
+  .sc-goguma .goguma { width: 25px; }
+  .stage-card.menu-card { padding: 16px 20px; gap: 10px; }
+  .menu-card .art { width: 50px; height: 50px; }
+  .menu-card .sc-keys { display: none; }
+  .mg { gap: 4px; padding: 8px 10px; }
+  .mg .g-icon { width: 24px; height: 24px; border-radius: 8px; }
+  .mg .g-icon .goguma { width: 19px; }
+  .mg .g-icon .ic { width: 14px; height: 14px; }
+  .mc-cta { height: 44px; font-size: 16px; }
+}
+@media (max-height: 700px) {
+  .screen.home { gap: 10px; padding-bottom: 8px; }
+  .stage-map { gap: 10px; }
+  .stage-card { padding: 8px 12px; }
+  .sc-name { font-size: 17px; }
+  .sc-keys { font-size: 13px; }
+  .sc-goguma .goguma { width: 21px; }
+  .gc-meta { margin-top: 2px; }
+  .map-tip { display: none; }
+  .stage-card.menu-card { padding: 12px 16px; gap: 7px; }
+  .menu-card .art { width: 40px; height: 40px; }
+  .menu-card .sc-name { font-size: 22px; }
+  .mg { padding: 6px 9px; gap: 0; }
+  .mg .g-icon { display: none; }
+  .mg small { margin-top: 0; }
+  .mc-cta { height: 40px; font-size: 15px; border-radius: 13px; }
+}
+
 /* 아래 키보드 */
 .kbd-area { flex: 0 0 auto; padding: 8px 14px calc(12px + env(safe-area-inset-bottom)); }
 
@@ -413,10 +522,6 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   .typed-bar { height: 42px; }
   .tb-text { font-size: 24px; }
   .tb-caret { height: 26px; }
-  .stage-card { padding: 5px 10px; }
-  .sc-name { font-size: 17px; }
-  .sc-goguma .goguma { width: 22px; }
-  .map-tip { display: none; }
   .press-enter { margin-top: 8px; font-size: 18px; }
   .press-enter kbd { font-size: 16px; }
   .pause-card { padding: 8px 28px; gap: 6px; }

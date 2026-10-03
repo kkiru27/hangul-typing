@@ -4,12 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>한글 타자 연습</title>
-<link rel="stylesheet" href="css/common.css?v=202610021304">
-<link rel="stylesheet" href="css/app.css?v=202610021304">
-<link rel="stylesheet" href="css/chunsik.css?v=202610021304">
-<link rel="preload" as="image" href="img/chunsik.png?v=202610021304">
-<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202610021304">
-<link rel="preload" as="image" href="img/chunsik-sad.png?v=202610021304">
+<meta name="theme-color" content="#f2f3f6">
+<link rel="preload" as="font" type="font/woff2" href="fonts/app-sans.woff2?v=202610030859" crossorigin>
+<link rel="stylesheet" href="css/common.css?v=202610030859">
+<link rel="stylesheet" href="css/app.css?v=202610030859">
+<link rel="stylesheet" href="css/chunsik.css?v=202610030859">
+<link rel="preload" as="image" href="img/chunsik.png?v=202610030859">
+<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202610030859">
+<link rel="preload" as="image" href="img/chunsik-sad.png?v=202610030859">
 </head>
 <body>
 <!-- 키보드 입력을 받는 숨은 입력칸 (한글 조합은 여기서 일어난다) -->
@@ -19,7 +21,7 @@
 <div id="app">
   <header class="topbar">
     <div class="top-left">
-      <div class="brand" id="brand">한글 타자 연습</div>
+      <div class="brand" id="brand"><span class="brand-logo" id="brandLogo"></span>한글 타자 연습</div>
       <!-- 처음 화면 안쪽에서는 '처음으로', 연습·게임 중에는 '멈춤' (키보드로는 Esc) -->
       <button type="button" class="nav-btn" id="navBtn" hidden></button>
     </div>
@@ -29,7 +31,7 @@
         <div class="round-label" id="roundLabel"></div>
         <div class="track" id="track">
           <div class="track-line"><div class="track-fill" id="trackFill"></div></div>
-          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202610021304" alt="" draggable="false"></div>
+          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202610030859" alt="" draggable="false"></div>
           <div class="track-goal" id="trackGoal"></div>
         </div>
       </div>
@@ -38,6 +40,8 @@
       <div class="stat"><span id="progressLabel">진행</span><b id="progress">–</b></div>
       <div class="stat"><span>정확도</span><b id="accuracy">–</b></div>
       <div class="stat" id="speedStat" hidden><span>타수</span><b id="speed">–</b></div>
+      <!-- 처음 화면: 모은 고구마 -->
+      <div class="goguma-chip" id="gogumaChip" hidden></div>
     </div>
   </header>
 
@@ -45,19 +49,23 @@
     <!-- 처음 화면 -->
     <section id="homeScreen" class="screen home">
       <div class="home-row">
-        <div id="homeChunsik"></div>
+        <!-- 춘식이 카드: 위에 춘식이 말, 아래에 춘식이 -->
+        <div class="cs-card">
+          <div id="homeChunsik"></div>
+          <div class="corner"><a href="test.html">입력 테스트 페이지</a><span id="version"></span></div>
+        </div>
         <div class="map-wrap">
-          <div class="map-total" id="mapTotal"></div>
           <!-- 단계 지도: 방향키로 고르고 Enter로 시작 (카드를 눌러도 시작) -->
           <div class="stage-map" id="stageMap"></div>
           <div class="map-pages" id="mapPages"></div>
-          <!-- 처음 화면 설정 줄: ↓ 로 내려와서 ← → 로 고르고 Enter -->
-          <div class="home-settings" id="homeSettings" hidden></div>
           <p class="map-tip" id="mapTip"></p>
         </div>
       </div>
-      <p class="press-enter" id="homeHint"></p>
-      <div class="corner"><a href="test.html">입력 테스트 페이지</a> · <span id="version"></span></div>
+      <div class="home-bottom">
+        <!-- 처음 화면 설정 줄: ↓ 로 내려와서 ← → 로 고르고 Enter -->
+        <div class="home-settings" id="homeSettings" hidden></div>
+        <p class="home-hint" id="homeHint"></p>
+      </div>
     </section>
 
     <!-- 연습 화면 -->
@@ -135,7 +143,7 @@
     <div class="pause-layer" id="pauseLayer" hidden>
       <div class="pause-card">
         <div class="pause-head">
-          <img class="pause-cs" src="img/chunsik.png?v=202610021304" alt="" draggable="false">
+          <img class="pause-cs" src="img/chunsik.png?v=202610030859" alt="" draggable="false">
           <div>
             <div class="pause-title">잠깐 쉬어요</div>
             <div class="pause-sub" id="pauseSub"></div>
@@ -154,6 +162,6 @@
 
 <div class="rotate-hint">아이패드를 <b>가로</b>로 돌려 주세요</div>
 
-<script type="module" src="js/app.js?v=202610021304"></script>
+<script type="module" src="js/app.js?v=202610030859"></script>
 </body>
 </html>

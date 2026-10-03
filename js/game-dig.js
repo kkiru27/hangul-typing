@@ -1,7 +1,7 @@
 // 고구마 캐기: 구멍에서 고구마가 쏙 올라오면, 적힌 글자 키를 눌러 캔다. 낱말을 몰라도 되는 자리 익히기 게임.
 // 게임 오버 없음. 시간이 지나면 고구마가 다시 쏙 들어간다(놓침). 경고 중·일시정지 중에는 멈춘다(pause).
 
-import { GOGUMA_SVG } from './chunsik-view.js?v=202610021304';
+import { GOGUMA_SVG } from './chunsik-view.js?v=202610030859';
 
 const HOLES = 8; // 2줄 × 4칸
 

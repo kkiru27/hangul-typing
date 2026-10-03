@@ -14,8 +14,8 @@
 // hello는 판을 시작할 때 춘식이가 하는 말 (고양이 말 + (해석)).
 // 연습 글은 모두 직접 고른 일상 낱말·직접 지은 글만 쓴다.
 
-import { toKeys } from './hangul.js?v=202610021304';
-import { makeSentences } from './sentence-maker.js?v=202610021304';
+import { toKeys } from './hangul.js?v=202610030859';
+import { makeSentences } from './sentence-maker.js?v=202610030859';
 
 // 낱말 → 그림 (그림이 없으면 빈칸). 주제별로 모아 적고, 판에서는 섞어서 낸다 (덜 본 낱말 먼저: app.js freshOrder)
 // 기본자리(ㅁㄴㅇㄹㅎ ㅗㅓㅏㅣ)로만 칠 수 있는 낱말. ㅘ(ㅗ+ㅏ)·ㅚ(ㅗ+ㅣ)도 이 키로 칠 수 있다. 이 자리로 되는 낱말은 원래 많지 않다
@@ -384,7 +384,7 @@ export const STAGES = [
     name: '긴 글',
     type: 'long',
     stories: STORIES,
-    preview: `📖 춘식이 이야기 ${STORIES.length}편`,
+    preview: `춘식이 이야기 ${STORIES.length}편`,
     tip: '이야기를 한 줄씩 차례로 쳐요. 줄 끝에서 Enter를 누르면 다음 줄이에요.',
     rounds: [
       { title: '이야기 1', hello: '춘! 춘춘! (내 이야기를 쳐 줘!)', count: 5 },
@@ -400,7 +400,7 @@ export const STAGES = [
     label: '검정',
     sentences: SENTENCES,
     duration: 60000,
-    preview: '⏱️ 1분 동안 문장 치기',
+    preview: '1분 동안 문장 치기',
     tip: '1분 동안 문장을 쳐서 타수를 재요. 첫 글자를 치면 시간이 가기 시작해요. 빠르기보다 정확하게!',
     rounds: [{ title: '1분 검정', hello: '춘?! (준비됐으면 치기 시작!)', count: 30 }],
   },
@@ -420,7 +420,7 @@ export const LEVEL_RANGES = [
 export const GAMES = [
   {
     id: 'game-dig', type: 'dig', group: '게임', name: '고구마 캐기', unlock: 0,
-    preview: '🌱 쏙 나온 글자 키 누르기',
+    preview: '쏙 나온 글자 키 누르기',
     tip: '구멍에서 고구마가 쏙 나오면 적힌 글자 키를 눌러 캐요. 낱말을 몰라도 할 수 있어요!',
     // stay: 올라와 있는 시간(ms), every: 다음 고구마까지(ms), max: 한 번에 올라와 있는 개수, hint: 칠 키를 키보드에 보여 줌
     levels: [
@@ -433,7 +433,7 @@ export const GAMES = [
   },
   {
     id: 'game-rain', type: 'rain', group: '게임', name: '고구마 비', unlock: 6,
-    preview: '🍠 떨어지는 낱말 잡기',
+    preview: '떨어지는 낱말 잡기',
     tip: '떨어지는 고구마에 적힌 낱말을 치고 스페이스바! 땅에 닿기 전에 춘식이가 먹게 해 줘요. 연달아 잡으면 콤보!',
     // fall: 떨어지는 데 걸리는 시간(처음 → 끝, ms), gap: 다음 고구마까지(처음 → 끝), max: 한 번에 떠 있는 개수
     levels: [
@@ -446,7 +446,7 @@ export const GAMES = [
   },
   {
     id: 'game-race', type: 'race', group: '게임', name: '춘식이 달리기', unlock: 15,
-    preview: '🏁 동물 친구와 낱말 달리기',
+    preview: '동물 친구와 낱말 달리기',
     tip: '낱말을 치고 스페이스바를 누를 때마다 춘식이가 달려요. 동물 친구보다 먼저 들어오면 이겨요!',
     // 동물 빠르기 cpm: 1분에 치는 키 수 (초보 눈높이로 정한 값 — 동생 기록을 보고 조정), words: 칠 낱말 수
     levels: [

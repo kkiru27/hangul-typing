@@ -74,6 +74,17 @@ check(await page.locator('#homeChunsik .cs-img').evaluate((el) => el.complete &&
 check(await pageOf(page) === 'menu' && await page.locator('.menu-card').count() === 2, '처음 화면: 타자 연습 / 게임 두 갈래');
 check((await text('.menu-card.selected')).includes('타자 연습') && (await text('#homeChunsik .cs-bubble')).includes('게임할까'), '처음엔 타자 연습이 골라져 있고 춘식이가 물어봄');
 check(await page.locator('#navBtn').isHidden() && await page.locator('#brand').isVisible(), '처음 화면: 왼쪽 위는 앱 이름');
+check(await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].some((f) => f.family.replace(/"/g, '') === 'AppSans' && f.status === 'loaded'); }), '앱 글꼴(AppSans) 불러옴');
+check((await text('.menu-card.selected .mc-cta')).includes('연습하러 가기') && (await text('.menu-card:not(.selected) .mc-cta')).includes('게임하러 가기'), '갈래 카드: 큰 단추 (고른 카드만 보라)');
+check(await page.locator('#gogumaChip').isVisible() && (await text('#gogumaChip')).includes('0') && await page.locator('#progress').isHidden(), '처음 화면: 오른쪽 위는 모은 고구마 (진행·정확도 숨김)');
+check(await page.locator('#stageMap .art').count() === 2 && !/[⌨🎮🔒🔊]/u.test(await text('#homeScreen')), '처음 화면: 이모지 대신 그린 아이콘');
+{
+  const card0 = await page.locator('.menu-card[data-idx="0"]').elementHandle();
+  await page.keyboard.press('ArrowRight');
+  const moved = await card0.evaluate((el) => el.isConnected && !el.classList.contains('selected') && el.nextElementSibling.classList.contains('selected'));
+  await page.keyboard.press('ArrowLeft');
+  check(moved && await card0.evaluate((el) => el.isConnected && el.classList.contains('selected')), '방향키로 고르면 카드는 그대로 두고 고른 표시만 옮김 (부드럽게 떠오르게)');
+}
 const lastSound = (p = page) => p.evaluate(() => document.body.dataset.lastSound || '');
 const layoutNow = () => page.locator('#keyboard').getAttribute('data-layout');
 const count = (sel) => page.locator(sel).count();

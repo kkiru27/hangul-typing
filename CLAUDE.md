@@ -17,13 +17,31 @@
 - **`main`에 push하면 바로 GitHub Pages로 배포**된다 (Settings → Pages: Deploy from a branch, main / root).
   PR·머지 없이 main에 바로 올려도 된다고 사용자가 허락함. 주소: https://kkiru27.github.io/hangul-typing/
 - 순서:
-  1. `python3 tools/release.py --strip` — 파일 주소의 `?v=빌드번호`를 뗀다 (고칠 때 비교가 쉬움)
+  1. `python3 tools/release.py --strip` — 파일 주소의 `?v=빌드번호`를 뗀다 (고칠 때 비교가 쉬움. html·js·css 모두)
   2. 고치기
   3. `npm test` + 브라우저 확인(아래)
   4. `python3 tools/release.py "N차 (날짜) · 설명"` — 버전 글자·모든 파일 주소에 빌드번호·`version.json` 갱신
   5. commit → `git push origin main` → GitHub Actions "pages build and deployment" 성공 확인
-- 지금 버전: **17차 (2026-10-02) · 게임 3개·레벨·잠금**. 사파리 캐시 때문에 주소마다 빌드번호를 붙이고,
+- 지금 버전: **18차 (2026-10-03) · 새 디자인(처음 화면·키보드)**. 사파리 캐시 때문에 주소마다 빌드번호를 붙이고,
   앱이 열릴 때 `version.json`을 보고 더 새 버전이면 한 번 다시 연다(`js/update-check.js`).
+
+## 디자인 (18차~, 사용자가 시안 E를 골랐다)
+- 시안: 캔버스 https://claude.ai/artifact/D7QXUiC3Hkjy3Brb7iAmTW 의 **E · 은은한 입체 + 생동감** (토스·카카오페이 같은 앱 느낌 참고).
+  사용자 말: "가장 중요한 건 자연스러움" → 그림자·그라데이션은 부드럽게, 움직임은 감속·살짝 튕김, 과한 효과 금지.
+- 기준은 `css/common.css :root`: 밝은 회색 바탕 `--bg`, 흰 카드, 강조색 보라 `--accent`(고구마 껍질), 둥글기 `--r-*`,
+  그림자 2단계 `--sh-1`(쉬는 카드)·`--sh-2`, 움직임 `--ease`·`--spring`·`--t*`. 손가락 색은 톤마다 `-soft/-top/-edge/-ink/-hi/-deep`.
+- **글꼴**: Pretendard(OFL-1.1, `fonts/OFL.txt`)를 앱 글자만 남겨 `fonts/app-sans.woff2`(약 106KB). 글을 고치면
+  `tests/font.test.mjs`가 빠진 글자를 알려 준다 → `python3 tools/font-subset.py <PretendardVariable.woff2>`
+  (준비: `pip install fonttools brotli`, `npm pack pretendard` 풀기). 앱에 없는 글자는 아이패드 기본 글꼴로 보인다.
+- **아이콘**: `js/icons.js` — 선 아이콘 `icon(name)`, 입체 그림 `ART.keyboard/gamepad/logo`, 고구마 `GOGUMA_SVG`.
+  그라데이션은 문서에 한 번(`DEFS`, 시작할 때 body에 붙임). 화면 장식 이모지는 쓰지 않는다(낱말 그림·달리기 동물 같은 내용 이모지는 그대로).
+- **키**: 위는 밝고 아래로 손가락 색 + 아래 얇은 두께. 기능키는 흰 키, 스페이스는 엄지 색. 다음 키는 손가락 색으로 차고 둘레가 숨 쉬듯 빛남.
+  누름 효과는 Web Animations(`keyboard-view.js flash`) → 화면 배치를 다시 계산하지 않는다.
+- **처음 화면**: 왼쪽 춘식이 카드(말 크게 + 춘식이 + 노란 동그라미, 아래 왼쪽에 버전) · 오른쪽 카드들 · 아래 줄(키보드 모양 3칸 + 소리 스위치 | 키 안내).
+  카드는 내용이 바뀔 때만 새로 그리고(`setCards`/`setHtml`) 고른 표시만 옮겨서 부드럽게 떠오른다. 화면이 바뀌면 `enter()`로 살짝 떠오르며 나타남.
+  세로가 좁으면(810px 이하·700px 이하) 카드 속을 줄인다. 높이별 넘침 검사: 640~900에서 카드가 줄 밖으로, 아래 줄이 키보드 위로 안 넘치는지.
+- 기기의 '동작 줄이기'를 켜면 움직임을 거의 없앤다(`prefers-reduced-motion`).
+- 남은 디자인 단계: 연습·결과·일시정지·게임 화면(②) → 최적화(③: 리플로 줄이기, 춘식이 WebP, 오프라인·홈 화면 앱).
 
 ## 작업 방식 (사용자와 합의)
 - 기능을 **단계별로** 만든다. 단계마다 **검토 → 오류면 원인을 찾아 고치고 다시 검토 → 통과하면 다음 단계**.

@@ -93,9 +93,31 @@
 .track-goal .goguma { width: 100%; display: block; animation: cs-bob 1.8s ease-in-out infinite; }
 .track.done .track-goal { transform: scale(.2); opacity: 0; }
 
-.home-row, .result-row { display: flex; align-items: center; gap: 26px; }
+.result-row { display: flex; align-items: center; gap: 26px; }
+
+/* 처음 화면 춘식이 카드: 위에 춘식이 말(크게), 오른쪽 아래에 춘식이, 뒤에 노란 동그라미 */
+.cs-card { position: relative; flex: 0 0 280px; overflow: hidden; border-radius: var(--r-xl); background: var(--card); box-shadow: var(--sh-1); }
+.cs-card::before {
+  content: ""; position: absolute; right: -56px; bottom: -80px; width: 250px; height: 250px;
+  border-radius: 50%; background: var(--sun);
+  animation: sun 7s ease-in-out infinite;
+}
+@keyframes sun { 50% { transform: scale(1.06); } }
+.cs-card .chunsik { position: absolute; inset: 0; display: block; padding: 22px 22px 0; --cs-h: 168px; }
+.cs-card .cs-bubble { position: relative; z-index: 1; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; white-space: normal; text-align: left; font-size: 15px; }
+.cs-card .cs-bubble::after { display: none; }
+.cs-card .cs-meow { font-size: 25px; font-weight: 800; letter-spacing: -.03em; line-height: 1.25; }
+.cs-card .cs-trans { margin-top: 5px; font-size: 15px; font-weight: 500; line-height: 1.45; color: var(--muted); opacity: 1; }
+.cs-card .cs-bubble[data-tone="bad"] .cs-trans, .cs-card .cs-bubble[data-tone="warn"] .cs-trans { color: inherit; }
+.cs-card .cs-body { position: absolute; right: -10px; bottom: -6px; }
+.cs-card .corner { position: absolute; left: 18px; bottom: 12px; z-index: 1; display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.35; color: var(--faint); }
+.cs-card .corner a { color: var(--muted); }
 
 @media (max-height: 700px) {
+  .cs-card { flex-basis: 240px; }
+  .cs-card .chunsik { --cs-h: 128px; padding: 18px 18px 0; }
+  .cs-card .cs-meow { font-size: 21px; }
+  .cs-card .cs-trans { font-size: 14px; }
   .chunsik.cs-m { --cs-h: 86px; }
   .chunsik.cs-l { --cs-h: 104px; }
   .cs-bubble { font-size: 15px; padding: 4px 12px; margin-bottom: 8px; }

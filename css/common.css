@@ -1,39 +1,82 @@
-/* 공통: 색, 가상 키보드, 손 그림 */
+/* 공통: 디자인 기준(색·글꼴·둥글기·그림자·움직임), 가상 키보드, 손 그림 */
+
+/* 글꼴: Pretendard를 이 앱에 쓰는 글자만 남긴 것 (tools/font-subset.py, 라이선스 fonts/OFL.txt) */
+@font-face {
+  font-family: "AppSans";
+  src: url("../fonts/app-sans.woff2?v=202610030859") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+
 :root {
-  --bg: #fff7ec;
+  /* 바탕과 글자 */
+  --bg: #f2f3f6;
   --card: #ffffff;
-  --ink: #3a2e2a;
-  --muted: #8c7b72;
-  --line: #eadbc8;
-  --accent: #ff7a59;
-  --ok: #23a26a;
-  --bad: #e5484d;
-  --warn-bg: #ffe9a8;
-  --warn-ink: #6b4a00;
+  --card-2: #f5f6f8;        /* 카드 안의 작은 칸 */
+  --line: #e6e8ed;
+  --ink: #1b1e27;
+  --ink-2: #3d4350;
+  --muted: #68707e;
+  --faint: #a3a9b5;
 
-  /* 손가락 색 (양손 같은 손가락은 같은 색) */
-  --pinky: #ec6a9c;  --pinky-soft: #fde3ee;
-  --ring: #f59a3c;   --ring-soft: #ffebd6;
-  --middle: #5fb345; --middle-soft: #e4f4da;
-  --index: #3e9be9;  --index-soft: #ddeefc;
-  --thumb: #9a6ad6;  --thumb-soft: #eee4fa;
-  --none: #bdb2a8;   --none-soft: #f1ece6;
+  /* 강조색 (고구마 껍질 보라) */
+  --accent: #6a3de0;
+  --accent-hi: #8b6cf0;
+  --accent-deep: #5129c2;
+  --accent-soft: #f0ebff;
+  --accent-ring: rgba(106, 61, 224, .16);
+  --accent-glow: rgba(106, 61, 224, .22);
 
-  font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --ok: #1f9d63;      --ok-soft: #e6f6ee;
+  --bad: #e5484d;     --bad-soft: #fdecec;
+  --warn-bg: #fff4d6; --warn-ink: #6b4a00;
+  --sun: #fff1c7;     /* 춘식이 뒤 노란 동그라미 */
+
+  /* 둥글기 · 그림자(쉬는 카드 / 떠 있는 카드) */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --sh-1: 0 1px 2px rgba(20, 24, 40, .04), 0 3px 10px rgba(20, 24, 40, .04);
+  --sh-2: 0 2px 6px rgba(20, 24, 40, .05), 0 14px 34px rgba(20, 24, 40, .09);
+
+  /* 움직임: 자연스럽게 감속 / 살짝 튕김 */
+  --ease: cubic-bezier(.22, .8, .24, 1);
+  --spring: cubic-bezier(.3, 1.35, .55, 1);
+  --t-fast: .14s;
+  --t: .24s;
+  --t-slow: .42s;
+
+  /* 손가락 색 (양손 같은 손가락은 같은 색)
+     --x 진한 색(다음 키·글자), -soft 키 바탕, -top 키 위쪽(밝게), -edge 키 아래 두께, -ink 키 글자, -hi/-deep 다음 키 그라데이션 */
+  --pinky: #ec6a9c;  --pinky-soft: #ffe2ed;  --pinky-top: #fff2f7;  --pinky-edge: #f2b6ce;  --pinky-ink: #8a1f4c;  --pinky-hi: #f590b8;  --pinky-deep: #c94c7e;
+  --ring: #f59a3c;   --ring-soft: #ffe9d2;   --ring-top: #fff6ec;   --ring-edge: #f2c38f;   --ring-ink: #8a4508;   --ring-hi: #f9b46c;   --ring-deep: #cf7a1f;
+  --middle: #5fb345; --middle-soft: #def2d3; --middle-top: #f1faeb; --middle-edge: #b3daa0; --middle-ink: #2f6620; --middle-hi: #80c86a; --middle-deep: #43912e;
+  --index: #3e9be9;  --index-soft: #dbeaff;  --index-top: #eef6ff;  --index-edge: #a6c8f2;  --index-ink: #154c80;  --index-hi: #67b2f1;  --index-deep: #2479c4;
+  --thumb: #9a6ad6;  --thumb-soft: #e9dfff;  --thumb-top: #f6f1ff;  --thumb-edge: #c6b3f0;  --thumb-ink: #4e2c8f;  --thumb-hi: #b38fe8;  --thumb-deep: #7a4cb8;
+  --none: #a3a9b5;   --none-soft: #f0f1f4;   --none-top: #ffffff;   --none-edge: #d8dce3;   --none-ink: #5d6573;   --none-hi: #b9bec8;   --none-deep: #858c99;
+
+  font-family: "AppSans", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
   color: var(--ink);
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); }
+body { word-break: keep-all; overflow-wrap: break-word; } /* 한국어는 낱말 단위로 줄바꿈 */
 button, a { font: inherit; }
 
-.tone-pinky  { --c: var(--pinky);  --c-soft: var(--pinky-soft); }
-.tone-ring   { --c: var(--ring);   --c-soft: var(--ring-soft); }
-.tone-middle { --c: var(--middle); --c-soft: var(--middle-soft); }
-.tone-index  { --c: var(--index);  --c-soft: var(--index-soft); }
-.tone-thumb  { --c: var(--thumb);  --c-soft: var(--thumb-soft); }
-.tone-none   { --c: var(--none);   --c-soft: var(--none-soft); }
+.tone-pinky  { --c: var(--pinky);  --c-soft: var(--pinky-soft);  --c-top: var(--pinky-top);  --c-edge: var(--pinky-edge);  --c-ink: var(--pinky-ink);  --c-hi: var(--pinky-hi);  --c-deep: var(--pinky-deep); }
+.tone-ring   { --c: var(--ring);   --c-soft: var(--ring-soft);   --c-top: var(--ring-top);   --c-edge: var(--ring-edge);   --c-ink: var(--ring-ink);   --c-hi: var(--ring-hi);   --c-deep: var(--ring-deep); }
+.tone-middle { --c: var(--middle); --c-soft: var(--middle-soft); --c-top: var(--middle-top); --c-edge: var(--middle-edge); --c-ink: var(--middle-ink); --c-hi: var(--middle-hi); --c-deep: var(--middle-deep); }
+.tone-index  { --c: var(--index);  --c-soft: var(--index-soft);  --c-top: var(--index-top);  --c-edge: var(--index-edge);  --c-ink: var(--index-ink);  --c-hi: var(--index-hi);  --c-deep: var(--index-deep); }
+.tone-thumb  { --c: var(--thumb);  --c-soft: var(--thumb-soft);  --c-top: var(--thumb-top);  --c-edge: var(--thumb-edge);  --c-ink: var(--thumb-ink);  --c-hi: var(--thumb-hi);  --c-deep: var(--thumb-deep); }
+.tone-none   { --c: var(--none);   --c-soft: var(--none-soft);   --c-top: var(--none-top);   --c-edge: var(--none-edge);   --c-ink: var(--none-ink);   --c-hi: var(--none-hi);   --c-deep: var(--none-deep); }
+
+/* 선 아이콘 (js/icons.js) */
+.ic { width: 1.15em; height: 1.15em; flex: 0 0 auto; vertical-align: -.2em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 /* 숨은 입력칸: 포커스는 받되 보이지 않게. 16px 미만이면 iOS가 확대한다 */
 .ime-hidden {
@@ -44,119 +87,114 @@ button, a { font: inherit; }
   pointer-events: none;
 }
 
+/* 작은 키 그림 (안내 글 속 Enter, Esc …) */
 kbd {
-  display: inline-block;
-  padding: .15em .6em;
-  border: 1.5px solid var(--line);
-  border-bottom-width: 4px;
+  display: inline-flex; align-items: center; justify-content: center; gap: .3em;
+  min-width: 1.9em;
+  padding: .12em .55em;
   border-radius: .5em;
-  background: var(--card);
+  background: linear-gradient(180deg, #fff, #f6f7f9);
+  box-shadow: inset 0 1px 0 #fff, 0 2px 0 var(--none-edge), 0 3px 6px rgba(20, 24, 40, .06);
   font-family: inherit;
   font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
 }
 
 /* ───── 가상 키보드 ───── */
 .kbd {
-  --u: min(calc((100vw - 28px) / var(--units, 16)), 74px);
+  --pad: 10px;
+  --u: min(calc((100vw - 28px - 2 * var(--pad)) / var(--units, 16)), 74px);
   --gap: 5px;
-  --kh: min(calc(var(--u) * .8), 6.5dvh); /* 기능키 줄(반 칸 높이)이 있어서 전체 높이가 예전(7.4dvh × 5줄)과 비슷하게 */
-  width: calc(var(--u) * var(--units, 16));
+  --kh: min(calc(var(--u) * .78), 6.3dvh); /* 기능키 줄(반 칸 높이)이 있어서 전체 높이가 예전(7.4dvh × 5줄)과 비슷하게 */
+  width: calc(var(--u) * var(--units, 16) + 2 * var(--pad));
   margin: 0 auto;
+  padding: var(--pad) var(--pad) calc(var(--pad) + 2px);
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  box-shadow: var(--sh-1);
   user-select: none;
   -webkit-user-select: none;
 }
 .kbd-row { display: flex; gap: var(--gap); }
+/* 키: 위는 밝고 아래로 갈수록 손가락 색. 아래에 얇은 두께와 부드러운 그림자 → 은은한 입체 */
 .key {
   position: relative;
   flex: 0 0 auto;
   width: calc(var(--u) * var(--w) - var(--gap));
   height: var(--kh);
-  border-radius: 9px;
-  background: var(--c-soft);
-  border: 1.5px solid rgba(90, 60, 40, .12);
-  border-bottom: 4px solid var(--c);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--c-top), var(--c-soft));
+  color: var(--c-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 2px 0 var(--c-edge), 0 3px 7px rgba(20, 24, 40, .06);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity .2s, transform .12s, background .15s;
+  transition: opacity var(--t) var(--ease), transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
 }
-.key.nav { --c: var(--none); --c-soft: #f7f3ee; }
+/* 기능키(Shift·Enter·Tab …)와 방향·편집키는 흰 키 (손가락 색은 '다음 키'가 될 때만) */
+.key.mod, .key.nav { --c-top: var(--none-top); --c-soft: var(--none-soft); --c-edge: var(--none-edge); --c-ink: var(--none-ink); }
+.key.mod.tone-thumb { --c-top: var(--thumb-top); --c-soft: var(--thumb-soft); --c-edge: var(--thumb-edge); --c-ink: var(--thumb-ink); } /* 스페이스바는 엄지 색 */
+.key.nav { --c: var(--none); --c-hi: var(--none-hi); --c-deep: var(--none-deep); }
 /* K380 맨 윗줄: 작은 기능키 (esc ~ del) */
-.fn-row .key { height: calc(var(--kh) * .5); border-bottom-width: 3px; border-radius: 7px; }
+.fn-row .key { height: calc(var(--kh) * .5); border-radius: 7px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 1.5px 0 var(--c-edge), 0 2px 5px rgba(20, 24, 40, .05); }
 .fn-row .key .k-label { font-size: calc(var(--kh) * .2); }
 /* 키 사이 빈 칸 (텐키리스의 기능키 묶음 사이 등) */
 .key-gap { flex: 0 0 auto; width: calc(var(--u) * var(--w) - var(--gap)); }
 /* 위아래 반 칸짜리 ↑ ↓ */
-.key-stack { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; width: calc(var(--u) * var(--w) - var(--gap)); height: var(--kh); }
-.key-stack .key { width: 100%; height: calc((var(--kh) - 2px) / 2); border-bottom-width: 2px; border-radius: 6px; }
+.key-stack { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; width: calc(var(--u) * var(--w) - var(--gap)); height: var(--kh); }
+.key-stack .key { width: 100%; height: calc((var(--kh) - 3px) / 2); border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 1.5px 0 var(--c-edge); }
 .key-stack .key .k-icon { font-size: calc(var(--kh) * .22); }
 .key .k-main { font-size: calc(var(--kh) * .42); font-weight: 700; line-height: 1; }
-.key.sym .k-main { font-size: calc(var(--kh) * .36); }
-.key .k-latin { position: absolute; top: 4px; left: 6px; font-size: calc(var(--kh) * .2); color: var(--muted); font-weight: 600; }
-.key .k-shift { position: absolute; top: 4px; right: 6px; font-size: calc(var(--kh) * .22); color: var(--muted); }
+.key.sym .k-main { font-size: calc(var(--kh) * .34); font-weight: 600; }
+.key .k-latin { position: absolute; top: 4px; left: 6px; font-size: calc(var(--kh) * .19); opacity: .62; font-weight: 600; }
+.key .k-shift { position: absolute; top: 4px; right: 6px; font-size: calc(var(--kh) * .21); opacity: .62; }
 .key.sym .k-shift { right: auto; left: 6px; }
 .key.mod { flex-direction: column; gap: 1px; }
-.key .k-label { font-size: calc(var(--kh) * .22); font-weight: 600; color: #5d4f48; white-space: nowrap; }
-.key .k-icon { font-size: calc(var(--kh) * .3); line-height: 1; color: #5d4f48; }
-.key .k-hint { font-size: calc(var(--kh) * .18); color: var(--muted); }
+.key .k-label { font-size: calc(var(--kh) * .21); font-weight: 600; white-space: nowrap; }
+.key .k-icon { font-size: calc(var(--kh) * .3); line-height: 1; }
+.key .k-hint { font-size: calc(var(--kh) * .17); opacity: .7; }
 /* ㄹ(F)·ㅓ(J) 볼록 표시 */
 .key.bump::after {
   content: ""; position: absolute; bottom: 6px; left: 50%;
-  width: 26%; height: 3px; margin-left: -13%;
-  border-radius: 2px; background: currentColor; opacity: .55;
+  width: 24%; height: 2.5px; margin-left: -12%;
+  border-radius: 2px; background: currentColor; opacity: .4;
 }
-.key.dim { opacity: .38; }
+.key.dim { opacity: .4; }
 
-/* 다음에 칠 키 */
+/* 다음에 칠 키: 손가락 색으로 차오르고 살짝 떠오른다. 둘레가 천천히 숨 쉬듯 빛난다 */
 .key.next {
   opacity: 1;
-  background: var(--c);
-  border-color: var(--c);
+  background: linear-gradient(180deg, var(--c-hi), var(--c));
   color: #fff;
-  transform: translateY(-3px);
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 2px 0 var(--c-deep), 0 8px 18px -4px var(--c);
   z-index: 1;
 }
 .key.next::before, .key.next-warn::before {
-  content: ""; position: absolute; inset: -7px;
-  border-radius: 14px; border: 3px solid var(--c);
-  animation: ring 1.1s ease-out infinite;
+  content: ""; position: absolute; inset: -6px;
+  border-radius: 15px;
+  border: 2.5px solid var(--c);
+  opacity: .5;
+  animation: breathe 1.6s var(--ease) infinite;
   pointer-events: none;
 }
-.key.next-warn::before { border-color: #ffaa00; }
-.key.next .k-latin, .key.next .k-shift, .key.next .k-label, .key.next .k-icon, .key.next .k-hint { color: rgba(255,255,255,.9); }
+.key.next-warn::before { border-color: #f5b400; }
+.key.next .k-latin, .key.next .k-shift, .key.next .k-label, .key.next .k-icon, .key.next .k-hint { color: rgba(255, 255, 255, .92); opacity: 1; }
 .key.next-warn {
   opacity: 1;
-  background: #ffc53d;
-  border-color: #c98a00;
-  transform: translateY(-3px);
+  background: linear-gradient(180deg, #ffe08a, #ffc53d);
+  color: #5c3d00;
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 2px 0 #d99a00, 0 8px 18px -4px rgba(245, 180, 0, .7);
   z-index: 1;
 }
-@keyframes ring {
-  0%   { opacity: .95; transform: scale(.94); }
-  100% { opacity: 0;   transform: scale(1.1); }
-}
-
-/* 누른 키 반짝임 */
-.key.flash-ok    { animation: flash-ok .45s ease-out; }
-.key.flash-bad   { animation: flash-bad .45s ease-out; }
-.key.flash-press { animation: flash-press .3s ease-out; }
-@keyframes flash-ok {
-  0%   { background: var(--ok); color: #fff; transform: translateY(2px) scale(.97); }
-  100% { }
-}
-@keyframes flash-bad {
-  0%   { background: var(--bad); color: #fff; transform: translateX(0); }
-  25%  { transform: translateX(-4px); }
-  50%  { transform: translateX(4px); }
-  75%  { transform: translateX(-2px); }
-  100% { }
-}
-@keyframes flash-press {
-  0%   { transform: translateY(2px) scale(.97); filter: brightness(.9); }
-  100% { }
+@keyframes breathe {
+  0%, 100% { opacity: .2; transform: scale(.97); }
+  50%      { opacity: .75; transform: scale(1.03); }
 }
 
 /* ───── 키보드 위의 반투명 손 (hands-view.js) ───── */
@@ -177,6 +215,8 @@ kbd {
 .hands-overlay .h-active-line { stroke: #fff; stroke-linecap: round; }
 .hands-overlay .h-active-fill { stroke: var(--c); stroke-linecap: round; }
 
+/* 기기에서 '동작 줄이기'를 켜면 움직임을 거의 없앤다 */
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .key.next::before, .key.next-warn::before { animation: none; }
 }
