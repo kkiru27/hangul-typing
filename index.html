@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>한글 타자 연습</title>
 <meta name="theme-color" content="#f2f3f6">
-<link rel="preload" as="font" type="font/woff2" href="fonts/app-sans.woff2?v=202610030859" crossorigin>
-<link rel="stylesheet" href="css/common.css?v=202610030859">
-<link rel="stylesheet" href="css/app.css?v=202610030859">
-<link rel="stylesheet" href="css/chunsik.css?v=202610030859">
-<link rel="preload" as="image" href="img/chunsik.png?v=202610030859">
-<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202610030859">
-<link rel="preload" as="image" href="img/chunsik-sad.png?v=202610030859">
+<link rel="preload" as="font" type="font/woff2" href="fonts/app-sans.woff2?v=202610030913" crossorigin>
+<link rel="stylesheet" href="css/common.css?v=202610030913">
+<link rel="stylesheet" href="css/app.css?v=202610030913">
+<link rel="stylesheet" href="css/chunsik.css?v=202610030913">
+<link rel="preload" as="image" href="img/chunsik.png?v=202610030913">
+<link rel="preload" as="image" href="img/chunsik-goguma.png?v=202610030913">
+<link rel="preload" as="image" href="img/chunsik-sad.png?v=202610030913">
 </head>
 <body>
 <!-- 키보드 입력을 받는 숨은 입력칸 (한글 조합은 여기서 일어난다) -->
@@ -31,7 +31,7 @@
         <div class="round-label" id="roundLabel"></div>
         <div class="track" id="track">
           <div class="track-line"><div class="track-fill" id="trackFill"></div></div>
-          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202610030859" alt="" draggable="false"></div>
+          <div class="track-runner" id="trackRunner"><img src="img/chunsik.png?v=202610030913" alt="" draggable="false"></div>
           <div class="track-goal" id="trackGoal"></div>
         </div>
       </div>
@@ -89,7 +89,7 @@
       </div>
       <!-- 친 글자가 보이는 입력 막대 (검색창처럼) -->
       <div class="typed-bar" id="typedBar">
-        <span class="tb-icon" aria-hidden="true">⌨️</span>
+        <span class="tb-icon" aria-hidden="true"></span>
         <span class="tb-line"><span class="tb-text" id="typedText"></span><span class="tb-caret"></span></span>
         <span class="tb-hint" id="typedHint">여기에 친 글자가 보여요</span>
       </div>
@@ -118,7 +118,7 @@
         <div id="gameCombo" class="game-combo" hidden></div>
       </div>
       <div class="typed-bar" id="gameBar">
-        <span class="tb-icon" aria-hidden="true">⌨️</span>
+        <span class="tb-icon" aria-hidden="true"></span>
         <span class="tb-line"><span class="tb-text" id="gameText"></span><span class="tb-caret"></span></span>
         <span class="tb-hint" id="gameHint">고구마에 적힌 낱말을 치고 스페이스바!</span>
       </div>
@@ -135,22 +135,22 @@
         <div class="result-note" id="resultNote" hidden></div>
         <div class="result-rounds" id="resultRounds"></div>
         <div class="result-miss" id="resultMiss"></div>
-        <p class="press-enter"><kbd>Enter ⏎</kbd> <span id="resultNext"></span></p>
+        <button type="button" class="result-cta" id="resultCta"><span id="resultNext"></span><kbd>Enter</kbd></button>
       </div>
       </div>
     </section>
-    <!-- 일시정지 창: 연습·게임 중 Esc 또는 ⏸ 단추 -->
+    <!-- 일시정지 창: 연습·게임 중 Esc 또는 멈춤 단추 -->
     <div class="pause-layer" id="pauseLayer" hidden>
       <div class="pause-card">
         <div class="pause-head">
-          <img class="pause-cs" src="img/chunsik.png?v=202610030859" alt="" draggable="false">
+          <img class="pause-cs" src="img/chunsik.png?v=202610030913" alt="" draggable="false">
           <div>
             <div class="pause-title">잠깐 쉬어요</div>
             <div class="pause-sub" id="pauseSub"></div>
           </div>
         </div>
         <div class="pause-menu" id="pauseMenu"></div>
-        <p class="pause-hint"><kbd>↑ ↓</kbd> 고르고 <kbd>Enter ⏎</kbd> · <kbd>Esc</kbd> 계속하기</p>
+        <p class="pause-hint"><kbd>↑</kbd><kbd>↓</kbd> 고르기<span class="sep"></span><kbd>Enter</kbd> 확인<span class="sep"></span><kbd>Esc</kbd> 계속하기</p>
       </div>
     </div>
   </main>
@@ -162,6 +162,6 @@
 
 <div class="rotate-hint">아이패드를 <b>가로</b>로 돌려 주세요</div>
 
-<script type="module" src="js/app.js?v=202610030859"></script>
+<script type="module" src="js/app.js?v=202610030913"></script>
 </body>
 </html>

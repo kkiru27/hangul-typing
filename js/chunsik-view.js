@@ -2,13 +2,14 @@
 // 흰 배경은 tools/cutout.py로 가장자리에서만 지웠다 (코·베개·눈 반짝임·눈물은 보존).
 
 export const POSES = {
-  stand: 'img/chunsik.png?v=202610030859',
-  goguma: 'img/chunsik-goguma.png?v=202610030859',
-  sad: 'img/chunsik-sad.png?v=202610030859',
+  stand: 'img/chunsik.png?v=202610030913',
+  goguma: 'img/chunsik-goguma.png?v=202610030913',
+  sad: 'img/chunsik-sad.png?v=202610030913',
 };
 
 // 고구마 그림은 icons.js에 (예전 import 자리 그대로 쓸 수 있게 다시 내보냄)
-export { GOGUMA_SVG } from './icons.js?v=202610030859';
+export { GOGUMA_SVG } from './icons.js?v=202610030913';
+import { FX } from './icons.js?v=202610030913';
 
 export class Chunsik {
   constructor(el, { size = 'm', pose = 'stand' } = {}) {
@@ -55,9 +56,9 @@ export class Chunsik {
   act(kind) {
     this.img.classList.remove('hop', 'oops', 'cheer');
     restart(this.img, kind);
-    const fx = { oops: '💦', cheer: '✨' }[kind];
+    const fx = FX[kind];
     if (fx) {
-      this.fx.textContent = fx;
+      this.fx.innerHTML = fx;
       restart(this.fx, 'show');
     }
   }

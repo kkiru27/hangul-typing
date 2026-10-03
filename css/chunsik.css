@@ -16,7 +16,7 @@
   white-space: normal; text-align: center; line-height: 1.35;
 }
 .chunsik.cs-m .cs-bubble[hidden] { display: none; }
-.chunsik.cs-m .cs-bubble::after { left: auto; right: -8.5px; bottom: auto; top: calc(50% - 6px); transform: rotate(-45deg); }
+.chunsik.cs-m .cs-bubble::after { left: auto; right: -6px; bottom: auto; top: calc(50% - 7px); transform: rotate(-45deg); }
 
 .cs-body { position: relative; animation: cs-bob 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
 .chunsik.party .cs-body { animation: cs-party .9s ease-in-out infinite; }
@@ -31,34 +31,33 @@
 .cs-img.oops  { animation: cs-oops .5s ease-in-out; }
 .cs-img.cheer { animation: cs-cheer .8s ease-in-out 2; }
 
-.cs-fx { position: absolute; top: 4%; right: 2%; font-size: calc(var(--cs-h) * .22); opacity: 0; }
+.cs-fx { position: absolute; top: 4%; right: 2%; width: calc(var(--cs-h) * .24); height: calc(var(--cs-h) * .24); opacity: 0; }
+.cs-fx svg { display: block; width: 100%; height: 100%; }
 .cs-fx.show { animation: cs-fx 1s ease-out; }
 
-/* 말풍선 (빈 칸도 자리를 차지해서 화면이 흔들리지 않게) */
+/* 말풍선 (빈 칸도 자리를 차지해서 화면이 흔들리지 않게): 흰 풍선 + 부드러운 그림자(꼬리까지 한 덩어리로) */
 .cs-bubble {
   position: relative;
   margin-bottom: 10px;
-  padding: 6px 14px;
+  padding: 7px 15px;
   background: #fff;
-  border: 2.5px solid #e8d6bf;
-  border-radius: 16px;
-  font-size: 17px; font-weight: 800;
+  border-radius: 18px;
+  font-size: 17px; font-weight: 700;
   white-space: nowrap;
   color: var(--ink);
-  box-shadow: 0 4px 10px rgba(120, 80, 40, .08);
+  filter: drop-shadow(0 1px 1px rgba(20, 24, 40, .06)) drop-shadow(0 6px 12px rgba(20, 24, 40, .09));
 }
 .cs-bubble[hidden] { display: block; visibility: hidden; }
 .cs-bubble::after {
-  content: ""; position: absolute; left: calc(50% - 7px); bottom: -8.5px;
-  width: 12px; height: 12px;
-  background: #fff;
-  border-right: 2.5px solid; border-bottom: 2.5px solid; border-color: inherit;
+  content: ""; position: absolute; left: calc(50% - 7px); bottom: -6px;
+  width: 14px; height: 14px; border-radius: 3px;
+  background: inherit;
   transform: rotate(45deg);
 }
-.cs-bubble[data-tone="good"] { border-color: #9ad7b3; color: #16734b; }
-.cs-bubble[data-tone="bad"]  { border-color: #f3a3a6; color: var(--bad); }
-.cs-bubble[data-tone="warn"] { border-color: #f0c24b; color: var(--warn-ink); }
-.cs-bubble.pop { animation: cs-pop .25s ease-out; }
+.cs-bubble[data-tone="good"] { background: #eefaf3; color: #15704a; }
+.cs-bubble[data-tone="bad"]  { background: #fff0f0; color: #c9353a; }
+.cs-bubble[data-tone="warn"] { background: #fff7de; color: var(--warn-ink); }
+.cs-bubble.pop { animation: cs-pop .3s var(--spring); }
 .cs-l .cs-bubble { font-size: 20px; padding: 8px 18px; }
 /* 춘식이 말 + (해석) */
 .cs-meow { display: block; font-weight: 900; letter-spacing: .5px; }
@@ -79,13 +78,13 @@
 .track-line {
   position: absolute; left: 16px; right: 40px; top: 50%;
   height: 10px; margin-top: -1px;
-  background: #efe3d3; border-radius: 5px; overflow: hidden;
+  background: #e6e8ed; border-radius: 5px; overflow: hidden;
 }
-.track-fill { height: 100%; width: calc(var(--p, 0) * 100%); background: linear-gradient(90deg, #ffd166, #ff9f68); transition: width .25s; }
+.track-fill { height: 100%; width: calc(var(--p, 0) * 100%); border-radius: 5px; background: linear-gradient(90deg, #ffd166, #ff9f68); transition: width .3s var(--ease); }
 .track-runner {
   position: absolute; top: -2px;
   left: calc(var(--p, 0) * (100% - 76px));
-  transition: left .25s;
+  transition: left .3s var(--ease);
 }
 .track-runner img { display: block; height: 46px; -webkit-user-drag: none; }
 .track-runner.hop img { animation: cs-hop .3s ease-out; }
@@ -104,7 +103,7 @@
 }
 @keyframes sun { 50% { transform: scale(1.06); } }
 .cs-card .chunsik { position: absolute; inset: 0; display: block; padding: 22px 22px 0; --cs-h: 168px; }
-.cs-card .cs-bubble { position: relative; z-index: 1; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; white-space: normal; text-align: left; font-size: 15px; }
+.cs-card .cs-bubble { position: relative; z-index: 1; margin: 0; padding: 0; background: none; filter: none; white-space: normal; text-align: left; font-size: 15px; }
 .cs-card .cs-bubble::after { display: none; }
 .cs-card .cs-meow { font-size: 25px; font-weight: 800; letter-spacing: -.03em; line-height: 1.25; }
 .cs-card .cs-trans { margin-top: 5px; font-size: 15px; font-weight: 500; line-height: 1.45; color: var(--muted); opacity: 1; }

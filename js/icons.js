@@ -23,6 +23,8 @@ const LINE = {
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   star: '<path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/>',
   bolt: '<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>',
+  flame: '<path d="M12 21c3.6 0 6-2.5 6-5.8 0-3.5-2.6-5.4-3.7-8.7-.3 2-1.3 3.2-2.4 3.7C11.9 7 10.6 4.6 8.6 3c.3 3-1.6 5-2.8 7.1A6.3 6.3 0 0 0 6 15.2C6 18.5 8.4 21 12 21z"/>',
+  tap: '<path d="M9 12V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M12 10.5a1.5 1.5 0 0 1 3 0V12"/><path d="M15 11.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.6a5 5 0 0 1-4.1-2.2L4.6 15a1.5 1.5 0 0 1 2.3-1.9L9 15"/>',
 };
 
 export function icon(name, cls = '') {
@@ -81,4 +83,10 @@ export const ART = {
   <rect x="6" y="4" width="28" height="11" rx="5.5" fill="rgba(255,255,255,.16)"/>
   <text x="20" y="25.5" text-anchor="middle" font-size="17" font-weight="800" fill="#fff" font-family="AppSans, -apple-system, sans-serif">가</text>
 </svg>`,
+};
+
+// 춘식이 옆 효과: 틀렸을 때 땀방울, 끝났을 때 반짝이
+export const FX = {
+  oops: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3.4 4.3 5.5 7.4 5.5 10.2a5.5 5.5 0 0 1-11 0C6.5 10.4 8.6 7.3 12 3z" fill="#8ccaff" stroke="#3f8fd8" stroke-width="1.4"/><path d="M9.6 13.5a2.6 2.6 0 0 0 2.2 2.6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`,
+  cheer: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.8 4.6 2.9 6.7 7.5 7.5-4.6.8-6.7 2.9-7.5 7.5-.8-4.6-2.9-6.7-7.5-7.5 4.6-.8 6.7-2.9 7.5-7.5z" fill="#ffd34d" stroke="#e8a600" stroke-width="1.2" stroke-linejoin="round"/><circle cx="19" cy="18" r="1.8" fill="#ffd34d"/><circle cx="5" cy="4.5" r="1.3" fill="#ffd34d"/></svg>`,
 };

@@ -415,7 +415,7 @@ await page.keyboard.press('Enter');
 check(await page.locator('#story').isVisible() && (await text('#roundLabel')).startsWith('11단계'), '긴 글 화면');
 const storyTitle0 = await text('#storyPrev');
 const stories = STAGES.find((st) => st.type === 'long').stories;
-const story = stories.find((st) => storyTitle0 === `📖 ${st.title}`);
+const story = stories.find((st) => storyTitle0.trim() === st.title);
 check(!!story, `첫 줄 위에 이야기 제목 (${storyTitle0})`);
 const storyNow = () => page.locator('#storyCur > span:not(.sent-enter)').evaluateAll((els) => els.map((el) => (el.classList.contains('sp') ? ' ' : el.textContent)).join(''));
 const l1 = await storyNow();

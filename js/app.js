@@ -2,23 +2,23 @@
 // 한 판은 목표 글(items) 여러 개로 이뤄진다. 자리 연습은 1개(자모 줄 전체), 낱말 연습은 낱말마다 1개("하마 "),
 // 짧은 글은 문장마다 1개 (문장을 다 치면 Enter 또는 스페이스바로 다음 문장).
 
-import { Judge } from './judge.js?v=202610030859';
-import { InputBridge } from './input-bridge.js?v=202610030859';
-import { KeyboardView } from './keyboard-view.js?v=202610030859';
-import { HandsView } from './hands-view.js?v=202610030859';
-import { STAGES, GAMES, gameLevel, levelKeys, levelWords, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js?v=202610030859';
-import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610030859';
-import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610030859';
-import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610030859';
-import { VERSION } from './version.js?v=202610030859';
-import { Chunsik } from './chunsik-view.js?v=202610030859';
-import { icon, ART, DEFS, GOGUMA_SVG } from './icons.js?v=202610030859';
-import { checkForUpdate } from './update-check.js?v=202610030859';
-import { RainGame } from './game-rain.js?v=202610030859';
-import { DigGame } from './game-dig.js?v=202610030859';
-import { RaceGame } from './game-race.js?v=202610030859';
-import { Sound } from './sound.js?v=202610030859';
-import { loadSettings, saveSettings } from './settings.js?v=202610030859';
+import { Judge } from './judge.js?v=202610030913';
+import { InputBridge } from './input-bridge.js?v=202610030913';
+import { KeyboardView } from './keyboard-view.js?v=202610030913';
+import { HandsView } from './hands-view.js?v=202610030913';
+import { STAGES, GAMES, gameLevel, levelKeys, levelWords, buildKeysRound, stageChars, stageNum, stageTitle, gameTitle, stagePreview, stageItems, freshOrder, sentenceOrder, pickStory, storyKey, itemsForRound } from './lessons.js?v=202610030913';
+import { codesFor, keyFor, FINGER_BY_CODE, FINGER_NAMES, KEY_LABEL, fingerTone, LAYOUTS, LAYOUT_IDS } from './layout.js?v=202610030913';
+import { isHangul, charName, josa, toUnits, toKeys } from './hangul.js?v=202610030913';
+import { loadRecords, loadSeen, markSeen, saveStageResult, suggestStage, levelId, gameGoguma, gamesMax, isLevelOpen, isGameOpen, suggestLevel, totalGoguma, gogumaFor, gogumaForTest, GOGUMA_MAX } from './records.js?v=202610030913';
+import { VERSION } from './version.js?v=202610030913';
+import { Chunsik } from './chunsik-view.js?v=202610030913';
+import { icon, ART, DEFS, GOGUMA_SVG } from './icons.js?v=202610030913';
+import { checkForUpdate } from './update-check.js?v=202610030913';
+import { RainGame } from './game-rain.js?v=202610030913';
+import { DigGame } from './game-dig.js?v=202610030913';
+import { RaceGame } from './game-race.js?v=202610030913';
+import { Sound } from './sound.js?v=202610030913';
+import { loadSettings, saveSettings } from './settings.js?v=202610030913';
 
 const $ = (id) => document.getElementById(id);
 document.body.insertAdjacentHTML('afterbegin', DEFS); // 아이콘 그라데이션 (한 번만)
@@ -38,6 +38,7 @@ const resultCs = new Chunsik($('resultChunsik'), { size: 'l' });
 const gameCs = new Chunsik($('gameChunsik'));
 $('trackGoal').innerHTML = GOGUMA_SVG;
 $('brandLogo').innerHTML = ART.logo;
+document.querySelectorAll('.tb-icon').forEach((el) => { el.innerHTML = icon('keyboard'); });
 
 // 춘식이 말투: 고양이 말 + (해석)
 const CHEERS = ['춘춘!! (좋아!)', '츈츈춘~! (잘한다!)', '춘! 춘! (척척!)', '춘춘춘!! (최고야!)', '츈~ 춘춘! (멋져!)', '춘?! 춘춘! (우와!)'];
@@ -354,9 +355,19 @@ function lockedShake(i) {
 
 // 화면이 바뀔 때: 살짝 아래에서 떠오르며 나타난다
 function enter(el) {
-  if (!el?.animate || REDUCED_MOTION()) return;
-  el.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
+  play(el, [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
     { duration: 320, easing: 'cubic-bezier(.22,.8,.24,1)' });
+}
+
+// 움직임 한 번 (Web Animations: 화면 배치를 다시 계산하지 않는다). 동작 줄이기면 건너뜀
+function play(el, keyframes, opts) {
+  if (!el?.animate || REDUCED_MOTION()) return null;
+  try { return el.animate(keyframes, opts); } catch { return null; }
+}
+
+// 톡 튀기 (콤보 등)
+function pop(el) {
+  play(el, [{ transform: 'scale(.82)' }, { transform: 'scale(1.08)', offset: .6 }, { transform: 'none' }], { duration: 320, easing: 'ease-out' });
 }
 
 // 처음 화면: ← → 는 같은 줄 안에서, ↓ 카드 → 설정 줄, ↑ 설정 줄 → 카드
@@ -463,7 +474,7 @@ function startRound() {
   playCs.pose('stand');
   playCs.say(round.hello || '춘춘! (같이 해 보자!)');
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610030859';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610030913';
 
   $('stageLabel').textContent = stageTitle(state.stageIdx);
   $('roundLabel').textContent = `${stageNum(state.stageIdx)} · ${round.title} (${roundIdx + 1}/${stage.rounds.length})`;
@@ -530,7 +541,7 @@ function finishRound() {
   playCs.act('cheer');
   playCs.say('츈츈츈!! (고구마 도착!)', 'good');
   $('track').classList.add('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610030859';
+  $('trackRunner').querySelector('img').src = 'img/chunsik-goguma.png?v=202610030913';
   setTimeout(() => (last ? showStageResult() : showRoundResult()), 1100);
 }
 
@@ -542,6 +553,21 @@ function resultChunsik(goguma, doneText) {
   else if (goguma === 2) resultCs.say('츈츈! (맛있다! 잘했어!)', 'good');
   else if (goguma === 1) resultCs.say('춘! 춘춘! (고구마 하나 받았어!)', 'good');
   else resultCs.say('춘... 춘춘! (괜찮아, 한 번 더 해 보자!)');
+}
+
+// 결과 화면 다음: 판이 남았으면 다음 판, 아니면 고르는 곳으로 (Enter 또는 큰 단추)
+function resultNext() {
+  if (state.screen === 'roundDone') { state.roundIdx++; startRound(); } else goHome();
+}
+$('resultCta').addEventListener('click', () => !$('resultScreen').hidden && resultNext());
+
+// 결과가 하나씩 나타난다: 숫자 → 고구마 → 안내 → 단추
+function revealResult() {
+  const steps = [['#resultAcc', 80], ['#resultGoguma', 200], ['#resultNote', 520], ['#resultCta', 380]];
+  for (const [sel, delay] of steps) {
+    play(document.querySelector(sel), [{ opacity: 0, transform: 'translateY(8px) scale(.96)' }, { opacity: 1, transform: 'none' }],
+      { duration: 420, delay, easing: 'cubic-bezier(.3,1.35,.55,1)', fill: 'backwards' });
+  }
 }
 
 function showRoundResult() {
@@ -556,6 +582,7 @@ function showRoundResult() {
   $('resultMiss').innerHTML = missText(r.missByKey);
   $('resultNext').textContent = '다음 판';
   resultChunsik(gogumaFor(r.accuracy), '완벽해!');
+  revealResult();
   keyboard.setNext(['Enter']);
 }
 
@@ -592,6 +619,7 @@ function showStageResult() {
   sound.play(saved.goguma > 0 ? 'fanfare' : 'cheer');
   $('accuracy').textContent = pct(acc);
   if (isTest) $('progress').textContent = '끝';
+  revealResult();
   keyboard.setNext(['Enter']);
 }
 
@@ -633,20 +661,21 @@ function openedSince(before) {
 
 function showNotes(saved, failText) {
   const notes = [];
-  if (saved.opened?.length) notes.push(`🔓 ${saved.opened.join(' · ')} 열렸어요!`);
-  if (saved.newBest) notes.push('🎉 새 기록!');
-  if (saved.newBestCpm) notes.push('⚡ 타수 새 기록!');
-  if (!saved.goguma) notes.push(failText);
+  const note = (ic, text, cls = '') => `<span class="note ${cls}">${ic ? icon(ic) : ''}${escapeHtml(text)}</span>`;
+  if (saved.opened?.length) notes.push(note('unlock', `${saved.opened.join(' · ')} 열렸어요!`, 'open'));
+  if (saved.newBest) notes.push(note('star', '새 기록!', 'best'));
+  if (saved.newBestCpm) notes.push(note('bolt', '타수 새 기록!', 'best'));
+  if (!saved.goguma) notes.push(note('', failText, 'fail'));
   $('resultNote').hidden = !notes.length;
-  $('resultNote').textContent = notes.join('  ');
+  $('resultNote').innerHTML = notes.join('');
 }
 
 // ───── 일시정지: Esc(또는 ⏸ 단추) → 계속하기 / 처음부터 다시 / 나가기 ─────
 
 const PAUSE_ITEMS = [
-  { act: 'resume', label: '▶ 계속하기' },
-  { act: 'restart', label: '🔄 처음부터 다시' },
-  { act: 'exit', label: '🏠 나가기' },
+  { act: 'resume', icon: 'play', label: '계속하기' },
+  { act: 'restart', icon: 'restart', label: '처음부터 다시' },
+  { act: 'exit', icon: 'home', label: '나가기' },
 ];
 
 function pause() {
@@ -668,8 +697,9 @@ function pause() {
 
 function renderPause() {
   const exitTo = state.level ? '레벨 고르기' : '단계 고르기';
-  $('pauseMenu').innerHTML = PAUSE_ITEMS.map((it, i) =>
-    `<button type="button" class="pause-item ${i === state.paused.sel ? 'selected' : ''}" data-act="${it.act}">${it.label}${it.act === 'exit' ? ` <small>(${exitTo})</small>` : ''}</button>`).join('');
+  setHtml($('pauseMenu'), PAUSE_ITEMS.map((it) =>
+    `<button type="button" class="pause-item" data-act="${it.act}">${icon(it.icon)}<span>${it.label}</span>${it.act === 'exit' ? `<small>${exitTo}</small>` : ''}</button>`).join(''));
+  [...$('pauseMenu').children].forEach((el, i) => el.classList.toggle('selected', i === state.paused.sel));
 }
 
 function movePause(delta) {
@@ -743,7 +773,7 @@ function startGame(gi, n) {
   $('roundLabel').textContent = title;
   $('stageLabel').textContent = title;
   $('track').classList.remove('done');
-  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610030859';
+  $('trackRunner').querySelector('img').src = 'img/chunsik.png?v=202610030913';
   $('gameScreen').dataset.kind = game.type;
   $('gameCombo').hidden = true;
   show('game');
@@ -773,10 +803,8 @@ function comboUp() {
   state.bestCombo = Math.max(state.bestCombo, state.combo);
   const c = $('gameCombo');
   c.hidden = state.combo < 2;
-  c.textContent = `🔥 ${state.combo} 콤보!`;
-  c.classList.remove('pop');
-  void c.offsetWidth;
-  c.classList.add('pop');
+  c.innerHTML = `${icon('flame')}<span>${state.combo} 콤보!</span>`;
+  pop(c);
   if (state.combo >= 3 && state.combo % 3 === 0) gameCs.say(`춘춘춘!! (${state.combo} 콤보! 대단해!)`, 'good');
 }
 
@@ -807,6 +835,7 @@ function showGameResult({
   $('resultNext').textContent = '레벨 고르기';
   resultChunsik(saved.goguma, '게임 끝!');
   sound.play(saved.goguma > 0 ? 'fanfare' : 'cheer');
+  revealResult();
   keyboard.setNext(['Enter']);
 }
 
@@ -1058,7 +1087,7 @@ function finishRace(win) {
   sound.play(win ? 'round' : 'drop');
   endGame({
     acc, cpm, goguma: win ? gogumaFor(acc) : 0,
-    label: '달리기', value: win ? '🏁 이겼어요!' : '아쉽게 졌어요',
+    label: '달리기', value: win ? '이겼어요!' : '아쉽게 졌어요',
     lines: [`정확도 <b>${pct(acc)}</b>`, `춘식이 <b>${cpm ?? '–'}</b>타`, `${rivalName} <b>${rivalCpm}</b>타`],
     failText: win ? '정확도 70%를 넘으면 고구마를 받아요' : `${rivalName}보다 먼저 들어오면 고구마를 받아요`,
   });
@@ -1211,10 +1240,8 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.repeat) setTimeout(submitGameWord, 30); // 조합이 확정된 뒤 읽는다
     if (e.key === 'Escape' && !e.repeat) pause();
   } else if (!$('resultScreen').hidden) {
-    if (e.key === 'Enter' && !e.repeat) {
-      if (state.screen === 'roundDone') { state.roundIdx++; startRound(); }
-      else goHome();
-    } else if (e.key === 'Escape') goHome();
+    if (e.key === 'Enter' && !e.repeat) resultNext();
+    else if (e.key === 'Escape') goHome();
   }
 
   if (e.code && !keyFor(e.key)) keyboard.flash(e.code, 'press'); // Backspace·Enter 등 눌림 표시
@@ -1246,8 +1273,8 @@ document.addEventListener('visibilitychange', () => {
 // ───── 그리기 ─────
 
 const WARNINGS = {
-  english: { icon: '🔤', text: '지금 영어로 입력돼요. Caps Lock을 눌러 한글로 바꿔요', chunsik: '춘?! (어? 영어가 나와!)' },
-  focus: { icon: '👆', text: '화면을 한 번 톡 눌러 주세요', chunsik: '춘춘~ (나를 톡 눌러 줘!)' },
+  english: { icon: 'keyboard', text: '지금 영어로 입력돼요. Caps Lock을 눌러 한글로 바꿔요', chunsik: '춘?! (어? 영어가 나와!)' },
+  focus: { icon: 'tap', text: '화면을 한 번 톡 눌러 주세요', chunsik: '춘춘~ (나를 톡 눌러 줘!)' },
 };
 
 function setWarn(kind) {
@@ -1259,9 +1286,9 @@ function setWarn(kind) {
   $('playScreen').classList.toggle('warning', !!kind && kind !== 'focus');
   if (kind) {
     sound.play('warn');
-    $('bannerIcon').textContent = WARNINGS[kind].icon;
+    $('bannerIcon').innerHTML = icon(WARNINGS[kind].icon);
     $('bannerText').textContent = WARNINGS[kind].text;
-    $('gameBanner').textContent = `${WARNINGS[kind].icon} ${WARNINGS[kind].text}`;
+    $('gameBanner').innerHTML = `<span class="banner-icon">${icon(WARNINGS[kind].icon)}</span><span>${WARNINGS[kind].text}</span>`;
     playCs.act('oops');
     playCs.say(WARNINGS[kind].chunsik, 'warn');
     gameCs.say(WARNINGS[kind].chunsik, 'warn');
@@ -1389,7 +1416,8 @@ function renderStory() {
   const { stage, roundIdx, itemIdx } = state;
   const at = stage.rounds.slice(0, roundIdx).reduce((n, r) => n + r.count, 0) + itemIdx;
   const { lines } = state.story;
-  $('storyPrev').textContent = at > 0 ? lines[at - 1] : `📖 ${state.story.title}`;
+  if (at > 0) $('storyPrev').textContent = lines[at - 1];
+  else $('storyPrev').innerHTML = `${icon('book')}<span>${escapeHtml(state.story.title)}</span>`;
   $('storyCur').innerHTML = lineHtml();
   $('storyNext').innerHTML = lines.slice(at + 1, at + 3).map(escapeHtml).join('<br>') || '이야기의 마지막 줄이에요';
 }
@@ -1532,7 +1560,7 @@ function cheer(goguma) {
 
 function missText(miss) {
   const list = Object.entries(miss).sort((a, b) => b[1] - a[1]);
-  if (!list.length) return '하나도 안 틀렸어요 👏';
+  if (!list.length) return '하나도 안 틀렸어요!';
   return '자주 틀린 키: ' + list.slice(0, 4).map(([k, n]) => `<b>${escapeHtml(charName(k))}</b> ${n}번`).join(', ');
 }
 
